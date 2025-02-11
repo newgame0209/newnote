@@ -3,6 +3,7 @@ import { Grid, List, Calendar, Filter, Settings, Trash2 } from 'lucide-react';
 import { AnimatedText } from "@/components/ui/animated-text";
 import { NewNoteModal } from "@/components/NewNoteModal";
 import { DeleteNoteDialog } from "@/components/DeleteNoteDialog";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { useNotes } from '@/contexts/NoteContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,6 +22,7 @@ interface Note {
 export default function Home() {
   const [isNewNoteModalOpen, setIsNewNoteModalOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [noteToDelete, setNoteToDelete] = React.useState<{ id: string; title: string } | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [activeTab, setActiveTab] = useState('category');
@@ -160,6 +162,7 @@ export default function Home() {
             />
           </h1>
           <button
+            onClick={() => setIsSettingsOpen(true)}
             className="rounded-md bg-transparent px-4 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors"
           >
             <Settings className="w-5 h-5" />
@@ -257,6 +260,11 @@ export default function Home() {
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
         noteTitle={noteToDelete?.title || ''}
+      />
+
+      <SettingsDialog
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
     </div>
   );

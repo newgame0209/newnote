@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '@/utils/utils';
-import { Pen, Eraser, Highlighter, Type, Image, Eye } from 'lucide-react';
+import { Pen, Eraser, Highlighter, Eye } from 'lucide-react';
 
 // グローバルなfabricの型定義
 declare global {
@@ -22,12 +22,47 @@ export function NoteEditor() {
   const fabricRef = useRef<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages] = useState(10); // 最大10ページ
-  const [currentTool, setCurrentTool] = useState<'pen' | 'eraser' | 'marker' | 'text' | 'image' | 'view'>('pen');
+  const [currentTool, setCurrentTool] = useState<'pen' | 'eraser' | 'marker' | 'view'>('pen');
   const [showPageIndicator, setShowPageIndicator] = useState(false);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
-  
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [mouseStart, setMouseStart] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   // ページコンテンツを保存する配列
   const pagesRef = useRef<string[]>(Array(totalPages).fill(''));
+
+  // キャンバスデータが空かどうかを判定する関数
+  const isCanvasEmpty = (canvasData: any): boolean => {
+    if (!canvasData) return true;
+    
+    // オブジェクトが存在しない、または空の配列の場合は空と判定
+    if (!canvasData.objects || canvasData.objects.length === 0) return true;
+    
+    // 背景色以外のオブジェクトが存在するかチェック
+    const hasDrawnObjects = canvasData.objects.some((obj: any) => {
+      // パスオブジェクト（描画）、テキスト、画像などが存在するか
+      return obj.type === 'path' || obj.type === 'text' || obj.type === 'image';
+    });
+    
+    return !hasDrawnObjects;
+  };
+
+  // キャンバスの完全クリア関数
+  const clearCanvas = () => {
+    if (!fabricRef.current) return;
+    const canvas = fabricRef.current;
+    
+    // キャンバス上の全オブジェクトを削除
+    canvas.clear();
+    // 背景色を再設定
+    canvas.backgroundColor = '#ffffff';
+    // キャンバスを再描画
+    canvas.renderAll();
+    
+    // 現在のページのデータもクリア
+    pagesRef.current[currentPage - 1] = undefined;
+  };
 
   // キャンバスの初期化
   useEffect(() => {
@@ -60,6 +95,9 @@ export function NoteEditor() {
         console.log('Canvas initialized:', canvas);
         fabricRef.current = canvas;
         setIsCanvasReady(true);
+
+        // 初期化時にキャンバスをクリア
+        clearCanvas();
 
         canvas.on('touch:gesture', (opt: any) => {
           if (opt.e.touches && opt.e.touches.length === 2) {
@@ -101,29 +139,75 @@ export function NoteEditor() {
     }
   }, []);
 
-  // ツール変更時の処理
+  // ツール変更時の処理を更新
   useEffect(() => {
-    if (!fabricRef.current || !isCanvasReady) return;
-
+    if (!isCanvasReady || !fabricRef.current) return;
     const canvas = fabricRef.current;
+
+    // 前回のツールの状態をリセット
+    canvas.isDrawingMode = false;
+    canvas.selection = true;
+    canvas.forEachObject((obj) => {
+      obj.selectable = true;
+      obj.evented = true;
+    });
+
     switch (currentTool) {
       case 'pen':
+        canvas.isDrawingMode = true;
         configurePen(canvas);
         break;
       case 'eraser':
+        canvas.isDrawingMode = true;
         configureEraser(canvas);
         break;
       case 'marker':
+        canvas.isDrawingMode = true;
         configureMarker(canvas);
         break;
       case 'view':
+        // 視覚モードの場合のみ、オブジェクトの選択と操作を無効化
         canvas.isDrawingMode = false;
+        canvas.selection = false;
+        canvas.forEachObject((obj) => {
+          obj.selectable = false;
+          obj.evented = false;
+        });
         break;
-      default:
-        canvas.isDrawingMode = true;
-        configurePen(canvas);
     }
   }, [currentTool, isCanvasReady]);
+
+  // ページ変更時の処理を更新
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages) return;
+
+    // 現在のページの状態を保存
+    if (fabricRef.current) {
+      const canvas = fabricRef.current;
+      const currentData = canvas.toJSON();
+      
+      // 空のキャンバスは保存しない（undefinedのまま）
+      if (!isCanvasEmpty(currentData)) {
+        pagesRef.current[currentPage - 1] = currentData;
+      }
+    }
+
+    // 新しいページに切り替える時はキャンバスをクリア
+    clearCanvas();
+
+    // 新しいページの状態を読み込む（保存データが存在し、空でない場合のみ）
+    const newPageData = pagesRef.current[newPage - 1];
+    if (newPageData && !isCanvasEmpty(newPageData)) {
+      fabricRef.current?.loadFromJSON(
+        newPageData,
+        fabricRef.current.renderAll.bind(fabricRef.current)
+      );
+    }
+
+    setCurrentPage(newPage);
+    setShowPageIndicator(true);
+    setTimeout(() => setShowPageIndicator(false), 2000);
+  };
 
   // ペンの設定を管理する関数
   const configurePen = (canvas: any) => {
@@ -201,12 +285,6 @@ export function NoteEditor() {
           canvas.isDrawingMode = true;
           configureMarker(canvas);
           break;
-        case 'text':
-          canvas.isDrawingMode = false;
-          break;
-        case 'image':
-          canvas.isDrawingMode = false;
-          break;
       }
     }
   }, [currentTool]);
@@ -231,50 +309,63 @@ export function NoteEditor() {
     }
   };
 
-  // ページ切り替え時の処理
-  const handlePageChange = (newPage: number) => {
-    if (newPage < 1 || newPage > totalPages) return;
-    
-    saveCurrentPage();
-    setCurrentPage(newPage);
-    loadPage(newPage);
-    
-    // ページインジケータを表示
-    setShowPageIndicator(true);
-    setTimeout(() => setShowPageIndicator(false), 2000);
+  // タッチイベントハンドラー
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (currentTool !== 'view') return;
+    setTouchStart(e.touches[0].clientX);
   };
 
-  // スワイプ検出の処理
-  useEffect(() => {
-    if (currentTool === 'view') return; // 視覚モードの場合はスワイプを無効化
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (currentTool !== 'view' || touchStart === null) return;
 
-    let touchStartX = 0;
-    
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartX = e.touches[0].clientX;
-    };
-    
-    const handleTouchEnd = (e: TouchEvent) => {
-      const touchEndX = e.changedTouches[0].clientX;
-      const diff = touchStartX - touchEndX;
-      
-      if (Math.abs(diff) > 50) { // スワイプの閾値
-        if (diff > 0 && currentPage < totalPages) {
-          handlePageChange(currentPage + 1);
-        } else if (diff < 0 && currentPage > 1) {
-          handlePageChange(currentPage - 1);
-        }
+    const currentTouch = e.touches[0].clientX;
+    const diff = touchStart - currentTouch;
+
+    handleSwipeNavigation(diff);
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStart(null);
+  };
+
+  // マウスイベントハンドラー
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (currentTool !== 'view') return;
+    setMouseStart(e.clientX);
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (currentTool !== 'view' || mouseStart === null || !isDragging) return;
+
+    const currentMouse = e.clientX;
+    const diff = mouseStart - currentMouse;
+
+    handleSwipeNavigation(diff);
+  };
+
+  const handleMouseUp = () => {
+    setMouseStart(null);
+    setIsDragging(false);
+  };
+
+  // ページナビゲーション共通ロジック
+  const handleSwipeNavigation = (diff: number) => {
+    // スワイプ/ドラッグの閾値（100pxの移動で次/前のページに遷移）
+    if (Math.abs(diff) > 100) {
+      if (diff > 0 && currentPage < totalPages) {
+        // 左スワイプ/ドラッグ → 次のページ
+        handlePageChange(currentPage + 1);
+      } else if (diff < 0 && currentPage > 1) {
+        // 右スワイプ/ドラッグ → 前のページ
+        handlePageChange(currentPage - 1);
       }
-    };
-    
-    document.addEventListener('touchstart', handleTouchStart);
-    document.addEventListener('touchend', handleTouchEnd);
-    
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [currentPage, currentTool]);
+      // 状態をリセット
+      setTouchStart(null);
+      setMouseStart(null);
+      setIsDragging(false);
+    }
+  };
 
   return (
     <div className="h-screen w-screen flex flex-col">
@@ -298,7 +389,7 @@ export function NoteEditor() {
 
       {/* ツールバー */}
       <div className="h-12 px-4 flex items-center space-x-4 bg-white border-b">
-        {(['pen', 'eraser', 'marker', 'text', 'image', 'view'] as const).map((tool) => (
+        {(['pen', 'eraser', 'marker', 'view'] as const).map((tool) => (
           <button
             key={tool}
             onClick={() => setCurrentTool(tool)}
@@ -312,8 +403,6 @@ export function NoteEditor() {
             {tool === 'pen' && <Pen className="w-4 h-4" />}
             {tool === 'eraser' && <Eraser className="w-4 h-4" />}
             {tool === 'marker' && <Highlighter className="w-4 h-4" />}
-            {tool === 'text' && <Type className="w-4 h-4" />}
-            {tool === 'image' && <Image className="w-4 h-4" />}
             {tool === 'view' && <Eye className="w-4 h-4" />}
           </button>
         ))}
@@ -321,19 +410,31 @@ export function NoteEditor() {
 
       {/* キャンバス */}
       <div className="flex-1 relative bg-white">
-        <canvas 
-          ref={canvasRef}
-          className="absolute inset-0 w-full h-full"
-          style={{ touchAction: 'none' }}
-        />
-      </div>
-
-      {/* ページインジケータ */}
-      {showPageIndicator && (
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full">
-          {currentPage} / {totalPages}
+        <div 
+          className="w-full h-full"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}  // マウスがキャンバス外に出た場合もリセット
+          style={{ cursor: currentTool === 'view' ? 'grab' : 'default' }}
+        >
+          <canvas 
+            ref={canvasRef}
+            className="absolute inset-0 w-full h-full"
+            style={{ touchAction: 'none' }}
+          />
         </div>
-      )}
+
+        {/* ページインジケータ */}
+        {showPageIndicator && (
+          <div className="fixed bottom-8 left-8 bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-lg">
+            {currentPage} / {totalPages}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
