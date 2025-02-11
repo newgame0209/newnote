@@ -33,6 +33,18 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# Backend
+*.db
+*_backup.db
+backend/logs/
+*.mp3
+*.jpg
+*_base64.txt
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+
 # IDE
 .idea/
 *.swp
