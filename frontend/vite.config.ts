@@ -13,13 +13,13 @@ export default defineConfig({
     include: ['fabric']
   },
   server: {
-    host: '0.0.0.0',  // ローカルネットワーク内からのアクセスを許可
-    port: 3000,       // ポート番号を3000に固定
+    host: 'localhost',
+    port: 3000,
+    strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        target: 'http://localhost:5001',
+        changeOrigin: true
       }
     }
   }

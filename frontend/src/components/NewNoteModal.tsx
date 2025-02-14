@@ -1,32 +1,22 @@
 import React, { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import * as RadioGroup from "@radix-ui/react-radio-group";
 import * as Label from "@radix-ui/react-label";
 import * as Select from "@radix-ui/react-select";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/utils/utils";
+import { Note } from "@/types/note";
 
 interface NewNoteModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onNoteCreate: (note: {
     title: string;
-    mainCategory: string;
-    subCategory: string;
-    type: string;
-    size: string;
-    orientation: string;
-  }) => void;
+    main_category: string;
+    sub_category: string;
+  }) => Promise<Note | null>;
 }
 
-type PaperSize = "A4" | "A3" | "A7";
-type PaperOrientation = "portrait" | "landscape";
-type PaperColor = "white" | "yellow";
-
 interface NoteSettings {
-  size: PaperSize;
-  orientation: PaperOrientation;
-  color: PaperColor;
   mainCategory: string;
   subCategory: string;
   title: string;
@@ -36,12 +26,6 @@ const mainCategories = [
   { value: "work", label: "仕事" },
   { value: "study", label: "学習" },
   { value: "personal", label: "プライベート" },
-];
-
-const paperSizes = [
-  { value: "A4", label: "A4" },
-  { value: "A3", label: "A3" },
-  { value: "A7", label: "A7" },
 ];
 
 const getSubCategories = (mainCategory: string) => {
@@ -90,9 +74,6 @@ export function NewNoteModal({
   onNoteCreate,
 }: NewNoteModalProps) {
   const [settings, setSettings] = React.useState<NoteSettings>({
-    size: "A4",
-    orientation: "portrait",
-    color: "white",
     mainCategory: "",
     subCategory: "",
     title: "",
@@ -144,48 +125,54 @@ export function NewNoteModal({
     return isValid;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    onNoteCreate({
-      title: settings.title,
-      mainCategory: settings.mainCategory,
-      subCategory: settings.subCategory,
-      type: "text",
-      size: settings.size,
-      orientation: settings.orientation,
-    });
+    try {
+      const newNote = await onNoteCreate({
+        title: settings.title,
+        main_category: settings.mainCategory,
+        sub_category: settings.subCategory,
+      });
 
-    onOpenChange(false);
-    navigate("/edit/new");
-
-    setSettings({
-      size: "A4",
-      orientation: "portrait",
-      color: "white",
-      mainCategory: "",
-      subCategory: "",
-      title: "",
-    });
-    setErrors({});
+      onOpenChange(false);
+      setSettings({
+        mainCategory: "",
+        subCategory: "",
+        title: "",
+      });
+      setErrors({});
+      
+      // 新しく作成されたノートのIDを使用してリダイレクト
+      if (newNote) {
+        navigate(`/edit/${newNote.id}`);
+      }
+    } catch (error) {
+      console.error('ノートの作成に失敗しました:', error);
+    }
   };
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40" />
-        <Dialog.Content 
-          className={cn(
-            "fixed left-1/2 w-[90vw] max-w-[500px] -translate-x-1/2 rounded-lg bg-white p-6 shadow-lg",
-            keyboardVisible 
-              ? "top-4" 
-              : "top-1/2 -translate-y-1/2" 
-          )}
-        >
+        <Dialog.Content className={cn(
+          "fixed left-1/2 w-[90vw] max-w-[500px] -translate-x-1/2 rounded-lg bg-white p-6 shadow-lg",
+          keyboardVisible 
+            ? "top-4" 
+            : "top-1/2 -translate-y-1/2" 
+        )}>
+          <Dialog.Title className="text-xl font-semibold mb-4">
+            新規ノート作成
+          </Dialog.Title>
+          <Dialog.Description className="text-gray-600 mb-6">
+            新しいノートを作成します。タイトルとカテゴリを入力してください。
+          </Dialog.Description>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label
@@ -268,55 +255,6 @@ export function NewNoteModal({
               {errors.subCategory && (
                 <p className="mt-1 text-sm text-red-500">{errors.subCategory}</p>
               )}
-            </div>
-
-            <div>
-              <label
-                className="block text-sm font-medium text-gray-700"
-              >
-                用紙サイズ <span className="text-red-500">*</span>
-              </label>
-              <RadioGroup.Root
-                value={settings.size}
-                onValueChange={(value: PaperSize) => setSettings({ ...settings, size: value })}
-                className="mt-1 grid grid-cols-3 gap-2"
-              >
-                {paperSizes.map((size) => (
-                  <RadioGroup.Item
-                    key={size.value}
-                    value={size.value}
-                    className={selectItemClass(settings.size === size.value)}
-                  >
-                    {size.label}
-                  </RadioGroup.Item>
-                ))}
-              </RadioGroup.Root>
-            </div>
-
-            <div>
-              <label
-                className="block text-sm font-medium text-gray-700"
-              >
-                用紙の向き <span className="text-red-500">*</span>
-              </label>
-              <RadioGroup.Root
-                value={settings.orientation}
-                onValueChange={(value: PaperOrientation) => setSettings({ ...settings, orientation: value })}
-                className="mt-1 grid grid-cols-2 gap-2"
-              >
-                <RadioGroup.Item
-                  value="portrait"
-                  className={selectItemClass(settings.orientation === "portrait")}
-                >
-                  縦向き
-                </RadioGroup.Item>
-                <RadioGroup.Item
-                  value="landscape"
-                  className={selectItemClass(settings.orientation === "landscape")}
-                >
-                  横向き
-                </RadioGroup.Item>
-              </RadioGroup.Root>
             </div>
 
             <div className="mt-6 flex justify-end gap-3">

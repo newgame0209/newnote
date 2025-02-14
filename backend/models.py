@@ -15,10 +15,6 @@ class Note(Base):
         title (str): ノートのタイトル
         main_category (str): メインカテゴリ
         sub_category (str): サブカテゴリ
-        paper_size (str): 用紙サイズ（A4, A3, A7）
-        orientation (str): 向き（portrait=縦, landscape=横）
-        color (str): 色（white=白, yellow=黄色）
-        last_edited_page (int): 最後に編集されたページ番号
         created_at (datetime): 作成日時
         updated_at (datetime): 更新日時
         pages (relationship): ページとの1対多のリレーション
@@ -29,10 +25,6 @@ class Note(Base):
     title = Column(String(100), nullable=False)
     main_category = Column(String(50), nullable=False)
     sub_category = Column(String(50), nullable=False)
-    paper_size = Column(String(10), nullable=False, default='A4')
-    orientation = Column(String(20), nullable=False, default='portrait')
-    color = Column(String(20), nullable=False, default='white')
-    last_edited_page = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

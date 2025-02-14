@@ -1,46 +1,114 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-interface Note {
-  id: string;
-  title: string;
-  mainCategory: string;
-  subCategory: string;
-  createdAt: string;
-  updatedAt: string;
-  type: string;
-  size: string;
-  orientation: string;
-}
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { Note, CreateNoteData } from '@/types/note';
+import * as NotesApi from '@/api/notes';
 
 interface NoteContextType {
   notes: Note[];
-  addNote: (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => Note;
-  deleteNote: (id: string) => void;
+  loading: boolean;
+  error: string | null;
+  addNote: (note: CreateNoteData) => Promise<Note>;
+  deleteNote: (id: string) => Promise<void>;
+  updateNote: (id: string, data: Partial<CreateNoteData>) => Promise<Note>;
+  fetchNote: (id: string) => Promise<Note>;
+  fetchNotes: () => Promise<void>;
 }
 
 const NoteContext = createContext<NoteContextType | undefined>(undefined);
 
 export function NoteProvider({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addNote = (noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newNote: Note = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...noteData,
-      createdAt: new Date().toLocaleDateString('ja-JP'),
-      updatedAt: new Date().toLocaleDateString('ja-JP')
-    };
-
-    setNotes(prev => [newNote, ...prev]);
-    return newNote;
+  const addNote = async (noteData: CreateNoteData): Promise<Note> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newNote = await NotesApi.createNote(noteData);
+      setNotes(prev => [newNote, ...prev]);
+      return newNote;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'ノートの作成中にエラーが発生しました';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteNote = (id: string) => {
-    setNotes(prev => prev.filter(note => note.id !== id));
+  const deleteNote = async (id: string): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await NotesApi.deleteNote(id);
+      setNotes(prev => prev.filter(note => note.id !== id));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'ノートの削除中にエラーが発生しました';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const updateNote = async (id: string, data: Partial<CreateNoteData>): Promise<Note> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const updatedNote = await NotesApi.updateNote(id, data);
+      setNotes(prev => prev.map(note => note.id === id ? updatedNote : note));
+      return updatedNote;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'ノートの更新中にエラーが発生しました';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchNote = async (id: string): Promise<Note> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const note = await NotesApi.fetchNote(id);
+      return note;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'ノートの取得中にエラーが発生しました';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchNotes = useCallback(async (): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const fetchedNotes = await NotesApi.fetchNotes();
+      setNotes(fetchedNotes);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'ノート一覧の取得中にエラーが発生しました';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // 空の依存配列
 
   return (
-    <NoteContext.Provider value={{ notes, addNote, deleteNote }}>
+    <NoteContext.Provider 
+      value={{ 
+        notes, 
+        loading, 
+        error, 
+        addNote, 
+        deleteNote,
+        updateNote,
+        fetchNote,
+        fetchNotes
+      }}
+    >
       {children}
     </NoteContext.Provider>
   );

@@ -36,58 +36,23 @@ def create_note():
         if not data or 'title' not in data:
             logger.warning("タイトルが指定されていません")
             raise NoteError('タイトルは必須です')
-            
-        # 用紙サイズのバリデーション
-        valid_paper_sizes = ['A4', 'A3', 'A7']
-        paper_size = data.get('paper_size', 'A4')
-        if paper_size not in valid_paper_sizes:
-            logger.warning(f"無効な用紙サイズ: {paper_size}")
-            raise NoteError(f'用紙サイズは{", ".join(valid_paper_sizes)}のいずれかを指定してください')
-            
-        # 向きのバリデーション
-        valid_orientations = ['portrait', 'landscape']
-        orientation = data.get('orientation', 'portrait')
-        if orientation not in valid_orientations:
-            logger.warning(f"無効な向き: {orientation}")
-            raise NoteError('向きは縦（portrait）または横（landscape）を指定してください')
-            
-        # 色のバリデーション
-        valid_colors = ['white', 'yellow']
-        color = data.get('color', 'white')
-        if color not in valid_colors:
-            logger.warning(f"無効な色: {color}")
-            raise NoteError('色は白（white）または黄色（yellow）を指定してください')
-            
-        # 最後に編集されたページの番号のバリデーション
-        last_edited_page = data.get('last_edited_page', 1)
-        if not isinstance(last_edited_page, int) or last_edited_page < 1:
-            logger.warning(f"無効なページ番号: {last_edited_page}")
-            raise NoteError('最後に編集されたページは1以上の整数を指定してください')
         
         db = Session()
         try:
             note = Note(
                 title=data['title'],
                 main_category=data.get('main_category', 'その他'),
-                sub_category=data.get('sub_category', ''),
-                paper_size=paper_size,
-                orientation=orientation,
-                color=color,
-                last_edited_page=last_edited_page
+                sub_category=data.get('sub_category', '')
             )
             db.add(note)
             db.commit()
             
             logger.info(f"ノートを作成しました: ID={note.id}")
             return jsonify({
-                'note_id': note.id,
+                'id': note.id,
                 'title': note.title,
                 'main_category': note.main_category,
                 'sub_category': note.sub_category,
-                'paper_size': note.paper_size,
-                'orientation': note.orientation,
-                'color': note.color,
-                'last_edited_page': note.last_edited_page,
                 'created_at': note.created_at.isoformat(),
                 'updated_at': note.updated_at.isoformat()
             }), 201
@@ -103,6 +68,24 @@ def create_note():
         logger.error(f"予期せぬエラー: {str(e)}")
         if not isinstance(e, (NoteError, SQLAlchemyError)):
             return jsonify({'error': 'サーバーエラーが発生しました'}), 500
+        raise
+
+@notes_bp.route('/notes', methods=['GET'])
+def get_notes():
+    """ノート一覧を取得するエンドポイント"""
+    try:
+        with Session() as session:
+            notes = session.query(Note).order_by(Note.created_at.desc()).all()
+            return jsonify([{
+                'id': note.id,
+                'title': note.title,
+                'main_category': note.main_category,
+                'sub_category': note.sub_category,
+                'created_at': note.created_at.isoformat(),
+                'updated_at': note.updated_at.isoformat()
+            } for note in notes])
+    except SQLAlchemyError as e:
+        logger.error(f"Failed to fetch notes: {e}")
         raise
 
 @notes_bp.route('/notes/<int:note_id>', methods=['GET'])
@@ -297,7 +280,7 @@ def add_page(note_id):
 
 @notes_bp.route('/notes/<int:note_id>/pages/<int:page_id>', methods=['PUT'])
 def update_page(note_id, page_id):
-    """指定されたページの内容を更新するエンドポイント"""
+    """指定されたページの内容を更新するエンドポイント。ページが存在しない場合は新規作成する。"""
     try:
         logger.info(f"ページ更新リクエスト: ノートID={note_id}, ページID={page_id}")
         data = request.get_json()
@@ -308,23 +291,38 @@ def update_page(note_id, page_id):
             
         db = Session()
         try:
+            # まずノートの存在確認
+            note = db.query(Note).filter(Note.id == note_id).first()
+            if not note:
+                logger.warning(f"ノートが見つかりません: ID={note_id}")
+                raise NoteError('指定されたノートが見つかりません', 404)
+
+            # ページの取得または新規作成
             page = db.query(Page).filter(
-                Page.id == page_id,
-                Page.note_id == note_id
+                Page.note_id == note_id,
+                Page.page_number == page_id  # page_idをpage_numberとして使用
             ).first()
             
             if not page:
-                logger.warning(f"ページが見つかりません: ID={page_id}")
-                raise NoteError('指定されたページが見つかりません', 404)
-                
-            if 'content' in data:
-                page.content = data['content']
-            if 'layout_settings' in data:
-                page.layout_settings = data['layout_settings']
+                # ページが存在しない場合は新規作成
+                page = Page(
+                    note_id=note_id,
+                    page_number=page_id,
+                    content=data.get('content', ''),
+                    layout_settings=data.get('layout_settings', {})
+                )
+                db.add(page)
+                logger.info(f"新しいページを作成: ノートID={note_id}, ページ番号={page_id}")
+            else:
+                # 既存のページを更新
+                if 'content' in data:
+                    page.content = data['content']
+                if 'layout_settings' in data:
+                    page.layout_settings = data['layout_settings']
+                logger.info(f"既存のページを更新: ID={page.id}")
                 
             db.commit()
             
-            logger.info(f"ページを更新しました: ID={page_id}")
             return jsonify({
                 'id': page.id,
                 'note_id': page.note_id,
@@ -332,6 +330,59 @@ def update_page(note_id, page_id):
                 'content': page.content,
                 'layout_settings': page.layout_settings
             })
+            
+        except SQLAlchemyError as e:
+            db.rollback()
+            logger.error(f"データベースエラー: {str(e)}")
+            raise
+        finally:
+            db.close()
+            
+    except Exception as e:
+        logger.error(f"予期せぬエラー: {str(e)}")
+        if not isinstance(e, (NoteError, SQLAlchemyError)):
+            return jsonify({'error': 'サーバーエラーが発生しました'}), 500
+        raise
+
+@notes_bp.route('/notes/<int:note_id>/pages/<int:page_id>', methods=['GET'])
+def get_page(note_id, page_id):
+    """指定されたページを取得するエンドポイント"""
+    try:
+        logger.info(f"ページ取得リクエスト: ノートID={note_id}, ページID={page_id}")
+        
+        db = Session()
+        try:
+            # まずノートの存在確認
+            note = db.query(Note).filter(Note.id == note_id).first()
+            if not note:
+                logger.warning(f"ノートが見つかりません: ID={note_id}")
+                raise NoteError('指定されたノートが見つかりません', 404)
+
+            # ページの取得
+            page = db.query(Page).filter(
+                Page.note_id == note_id,
+                Page.page_number == page_id
+            ).first()
+            
+            if not page:
+                logger.warning(f"ページが見つかりません: ノートID={note_id}, ページ番号={page_id}")
+                # ページが存在しない場合は空のページを返す
+                return jsonify({
+                    'id': None,
+                    'note_id': note_id,
+                    'page_number': page_id,
+                    'content': '',
+                    'layout_settings': {}
+                }), 200
+            
+            logger.info(f"ページを取得しました: ID={page.id}")
+            return jsonify({
+                'id': page.id,
+                'note_id': page.note_id,
+                'page_number': page.page_number,
+                'content': page.content,
+                'layout_settings': page.layout_settings
+            }), 200
             
         except SQLAlchemyError as e:
             db.rollback()
@@ -354,8 +405,8 @@ def delete_page(note_id, page_id):
         db = Session()
         try:
             page = db.query(Page).filter(
-                Page.id == page_id,
-                Page.note_id == note_id
+                Page.note_id == note_id,
+                Page.page_number == page_id
             ).first()
             
             if not page:
@@ -368,7 +419,7 @@ def delete_page(note_id, page_id):
             # ページ番号を再整理
             remaining_pages = db.query(Page).filter(
                 Page.note_id == note_id,
-                Page.page_number > page.page_number
+                Page.page_number > page_id
             ).order_by(Page.page_number).all()
             
             for p in remaining_pages:

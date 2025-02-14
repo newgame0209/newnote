@@ -19,7 +19,6 @@ Session = scoped_session(session_factory)
 
 def init_db():
     """
-    @docs
     データベースの初期化を行う関数
     テーブルが存在しない場合は作成する
     """
@@ -27,14 +26,11 @@ def init_db():
 
 def get_db():
     """
-    @docs
     データベースセッションを取得する関数
-    
-    Returns:
-        Session: データベースセッション
     """
     db = Session()
     try:
-        yield db
-    finally:
-        db.close()
+        return db
+    except Exception as e:
+        db.rollback()
+        raise e
