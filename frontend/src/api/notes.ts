@@ -175,3 +175,51 @@ export const executeOCR = async (noteId: number, pageNumber: number, imageData: 
     throw new Error('OCR処理に失敗しました。もう一度お試しください。');
   }
 };
+
+/**
+ * テキストを音声に変換する
+ * @param text 変換するテキスト
+ * @param voiceType 音声タイプ（'male' または 'female'）
+ * @returns 音声データ（Blob）
+ */
+export const synthesizeSpeech = async (
+  text: string,
+  voiceType: 'male' | 'female'
+): Promise<Blob> => {
+  try {
+    const voiceConfig = {
+      male: {
+        name: 'ja-JP-Neural2-C',
+        ssml_gender: 'MALE'
+      },
+      female: {
+        name: 'ja-JP-Neural2-B',
+        ssml_gender: 'FEMALE'
+      }
+    };
+
+    const response = await fetch(`${API_BASE_URL}/tts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text,
+        voice: {
+          language_code: 'ja-JP',
+          ...voiceConfig[voiceType]
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || '音声の生成に失敗しました');
+    }
+
+    return response.blob();
+  } catch (error) {
+    console.error('Error synthesizing speech:', error);
+    throw new Error('音声の生成中にエラーが発生しました');
+  }
+};

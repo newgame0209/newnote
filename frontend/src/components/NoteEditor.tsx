@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '@/utils/utils';
 import { Pen, Eraser, Highlighter, Eye } from 'lucide-react';
-import { updatePage, getPage, executeOCR } from '@/api/notes';
+import { updatePage, getPage, executeOCR, synthesizeSpeech } from '@/api/notes';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useNotes } from '@/contexts/NoteContext';
 
 // グローバルなfabricの型定義
 declare global {
@@ -19,6 +21,10 @@ declare global {
 export function NoteEditor() {
   const navigate = useNavigate();
   const { noteId } = useParams();
+  const { voiceType } = useSettings();
+  const { notes, fetchNotes } = useNotes();
+  const currentNote = notes.find(note => note.id === Number(noteId));
+  const [noteTitle, setNoteTitle] = useState(currentNote?.title || '');  
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,6 +37,9 @@ export function NoteEditor() {
   const [isDragging, setIsDragging] = useState(false);
   const [isOCRProcessing, setIsOCRProcessing] = useState(false);
   const [ocrError, setOCRError] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // ページコンテンツを保存する配列
   const pagesRef = useRef<string[]>(Array(totalPages).fill(''));
@@ -285,6 +294,7 @@ export function NoteEditor() {
     try {
       setIsOCRProcessing(true);  // 既存のローディング状態を利用
       setOCRError(null);
+      setAudioError(null);
 
       // OCR処理を実行
       const tempCanvas = document.createElement('canvas');
@@ -306,12 +316,44 @@ export function NoteEditor() {
       const text = await executeOCR(noteId, currentPage, imageData);
       console.log('OCR結果:', text);
 
-      // TODO: ここにtext-to-speech処理を追加
-      console.log('音声変換対象テキスト:', text);
+      if (text.trim()) {
+        // 音声生成と再生
+        const audioBlob = await synthesizeSpeech(text, voiceType);
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        // 既存の音声を停止
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+        }
+
+        // 新しい音声を再生
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+
+        audio.onended = () => {
+          setIsPlaying(false);
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+        };
+
+        audio.onerror = () => {
+          setAudioError('音声の再生中にエラーが発生しました');
+          setIsPlaying(false);
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+        };
+
+        setIsPlaying(true);
+        await audio.play();
+      } else {
+        setAudioError('テキストが見つかりませんでした');
+      }
 
     } catch (error) {
       console.error('音声変換エラー:', error);
       setOCRError(error instanceof Error ? error.message : '予期せぬエラーが発生しました');
+      setAudioError('音声の生成中にエラーが発生しました');
     } finally {
       setIsOCRProcessing(false);
     }
@@ -423,6 +465,10 @@ export function NoteEditor() {
     }
   };
 
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
+
   return (
     <div className="h-screen w-screen flex flex-col">
       {/* ヘッダー */}
@@ -433,6 +479,12 @@ export function NoteEditor() {
         >
           ← 戻る
         </button>
+        {/* タイトルを中央に配置 */}
+        <div className="absolute left-1/2 transform -translate-x-1/2">
+          <h1 className="text-white font-medium">
+            {currentNote?.title || ''}
+          </h1>
+        </div>
         <div className="flex space-x-4">
           <button
             onClick={handleSave}
@@ -442,12 +494,14 @@ export function NoteEditor() {
           </button>
           <button
             onClick={handleTextToSpeech}
-            disabled={isOCRProcessing}
+            disabled={isOCRProcessing || isPlaying}
             className={`px-4 py-2 text-sm font-medium ${
-              isOCRProcessing ? 'bg-gray-300' : 'bg-[#232B3A]'
+              isOCRProcessing || isPlaying ? 'bg-gray-300' : 'bg-[#232B3A]'
             } border border-white rounded-md hover:bg-[#232B3A]/90 transition-colors`}
           >
             {isOCRProcessing ? (
+              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : isPlaying ? (
               <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               '音声変換'
@@ -503,6 +557,19 @@ export function NoteEditor() {
             <p>{ocrError}</p>
             <button
               onClick={() => setOCRError(null)}
+              className="ml-2 underline hover:no-underline"
+            >
+              閉じる
+            </button>
+          </div>
+        )}
+
+        {/* 音声エラー表示 */}
+        {audioError && (
+          <div className="fixed bottom-20 left-6 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg">
+            <p>{audioError}</p>
+            <button
+              onClick={() => setAudioError(null)}
               className="ml-2 underline hover:no-underline"
             >
               閉じる
