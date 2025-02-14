@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '@/utils/utils';
 import { Pen, Eraser, Highlighter, Eye } from 'lucide-react';
+import { updatePage, getPage, executeOCR } from '@/api/notes';
 
 // グローバルなfabricの型定義
 declare global {
@@ -28,6 +29,8 @@ export function NoteEditor() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [mouseStart, setMouseStart] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isOCRProcessing, setIsOCRProcessing] = useState(false);
+  const [ocrError, setOCRError] = useState<string | null>(null);
 
   // ページコンテンツを保存する配列
   const pagesRef = useRef<string[]>(Array(totalPages).fill(''));
@@ -64,80 +67,79 @@ export function NoteEditor() {
     pagesRef.current[currentPage - 1] = undefined;
   };
 
+  // ページ番号表示用のテキストオブジェクトを管理するRef
+  const pageNumberTextRef = useRef<fabric.Text | null>(null);
+
   // キャンバスの初期化
   useEffect(() => {
     const initCanvas = () => {
-      if (!canvasRef.current || fabricRef.current) return;
-
-      // window.fabric から取得（CDN 経由で読み込んでいることが前提）
-      const fabric = window.fabric;
-      if (!fabric) {
-        console.error('Fabric.js が読み込まれていません。public/index.html に CDN スクリプトを追加してください。');
-        return;
+      if (!canvasRef.current) return;
+      
+      // キャンバスを破棄して再作成
+      if (fabricRef.current) {
+        fabricRef.current.dispose();
       }
+      
+      const canvas = new window.fabric.Canvas(canvasRef.current, {
+        isDrawingMode: true,
+        width: window.innerWidth,
+        height: window.innerHeight - 100,
+        preserveObjectStacking: true,
+        backgroundColor: '#ffffff',  // 白色の背景を設定
+      });
 
-      try {
-        const container = canvasRef.current.parentElement;
-        if (!container) return;
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-        canvasRef.current.width = width;
-        canvasRef.current.height = height;
+      // ページ番号テキストの作成
+      const pageText = new window.fabric.Text(`Page ${currentPage}`, {
+        left: 20,
+        top: canvas.height - 40,
+        fontSize: 16,
+        fill: '#666',
+        selectable: false,
+        evented: false,
+        hasControls: false,
+        hasBorders: false,
+      });
+      canvas.add(pageText);
+      pageNumberTextRef.current = pageText;
 
-        const canvas = new fabric.Canvas(canvasRef.current, {
-          width,
-          height,
-          backgroundColor: '#ffffff',
-          isDrawingMode: true,
-          selection: false,
-        });
+      canvas.on('after:render', () => {
+        console.log('キャンバス再描画完了');
+      });
 
-        console.log('Canvas initialized:', canvas);
-        fabricRef.current = canvas;
-        setIsCanvasReady(true);
+      fabricRef.current = canvas;
+      setIsCanvasReady(true);
 
-        // 初期化時にキャンバスをクリア
-        clearCanvas();
-
-        canvas.on('touch:gesture', (opt: any) => {
-          if (opt.e.touches && opt.e.touches.length === 2) {
-            opt.e.preventDefault();
-          }
-        });
-
-        configurePen(canvas);
-
-        const handleResize = () => {
-          if (!container) return;
-          const newWidth = container.clientWidth;
-          const newHeight = container.clientHeight;
-          canvas.setWidth(newWidth);
-          canvas.setHeight(newHeight);
-          canvas.renderAll();
-        };
-        window.addEventListener('resize', handleResize);
-
-        return () => {
-          window.removeEventListener('resize', handleResize);
-          document.body.style.overflow = 'auto';
-          canvas.dispose();
-          fabricRef.current = null;
-          setIsCanvasReady(false);
-        };
-      } catch (error) {
-        console.error('Canvas initialization error:', error);
-        setIsCanvasReady(false);
+      if (noteId && currentPage) {
+        setTimeout(() => {
+          loadPageData(currentPage);
+        }, 100);
       }
     };
 
-    // DOMの読み込み完了後にキャンバスを初期化
-    if (document.readyState === 'complete') {
-      initCanvas();
-    } else {
-      window.addEventListener('load', initCanvas);
-      return () => window.removeEventListener('load', initCanvas);
+    initCanvas();
+
+    return () => {
+      if (fabricRef.current) {
+        fabricRef.current.dispose();
+      }
+    };
+  }, [noteId]);
+
+  // ページ変更時のみデータを読み込む
+  const handlePageChange = (newPage: number) => {
+    if (newPage === currentPage) return;
+    
+    // ページ番号テキストを更新
+    if (pageNumberTextRef.current) {
+      pageNumberTextRef.current.set({
+        text: `Page ${newPage}`
+      });
+      fabricRef.current?.requestRenderAll();
     }
-  }, []);
+    
+    setCurrentPage(newPage);
+    loadPageData(newPage);
+  };
 
   // ツール変更時の処理を更新
   useEffect(() => {
@@ -176,38 +178,6 @@ export function NoteEditor() {
         break;
     }
   }, [currentTool, isCanvasReady]);
-
-  // ページ変更時の処理を更新
-  const handlePageChange = (newPage: number) => {
-    if (newPage < 1 || newPage > totalPages) return;
-
-    // 現在のページの状態を保存
-    if (fabricRef.current) {
-      const canvas = fabricRef.current;
-      const currentData = canvas.toJSON();
-      
-      // 空のキャンバスは保存しない（undefinedのまま）
-      if (!isCanvasEmpty(currentData)) {
-        pagesRef.current[currentPage - 1] = currentData;
-      }
-    }
-
-    // 新しいページに切り替える時はキャンバスをクリア
-    clearCanvas();
-
-    // 新しいページの状態を読み込む（保存データが存在し、空でない場合のみ）
-    const newPageData = pagesRef.current[newPage - 1];
-    if (newPageData && !isCanvasEmpty(newPageData)) {
-      fabricRef.current?.loadFromJSON(
-        newPageData,
-        fabricRef.current.renderAll.bind(fabricRef.current)
-      );
-    }
-
-    setCurrentPage(newPage);
-    setShowPageIndicator(true);
-    setTimeout(() => setShowPageIndicator(false), 2000);
-  };
 
   // ペンの設定を管理する関数
   const configurePen = (canvas: any) => {
@@ -257,7 +227,7 @@ export function NoteEditor() {
       // 視覚モードの場合
       canvas.isDrawingMode = false;
       canvas.selection = false;
-      canvas.forEachObject((obj: any) => {
+      canvas.forEachObject((obj) => {
         obj.selectable = false;
         obj.evented = false;
       });
@@ -265,7 +235,7 @@ export function NoteEditor() {
     } else {
       // その他のモードの場合
       canvas.selection = true;
-      canvas.forEachObject((obj: any) => {
+      canvas.forEachObject((obj) => {
         obj.selectable = true;
         obj.evented = true;
       });
@@ -289,24 +259,110 @@ export function NoteEditor() {
     }
   }, [currentTool]);
 
-  // 現在のページを保存
-  const saveCurrentPage = () => {
-    if (!fabricRef.current) return;
-    pagesRef.current[currentPage - 1] = JSON.stringify(fabricRef.current.toJSON());
+  // 保存ボタンのクリックハンドラ
+  const handleSave = async () => {
+    if (!fabricRef.current || !noteId) return;
+
+    try {
+      const canvasData = fabricRef.current.toJSON();
+      console.log('保存するキャンバスデータ:', canvasData);
+
+      const content = JSON.stringify(canvasData);
+      const result = await updatePage(noteId, currentPage, content);
+      console.log('保存結果:', result);
+      
+      alert('保存しました');
+    } catch (error) {
+      console.error('保存エラー:', error);
+      alert('保存に失敗しました');
+    }
   };
 
-  // 指定したページを読み込む
-  const loadPage = (pageNumber: number) => {
-    if (!fabricRef.current) return;
-    
-    const canvas = fabricRef.current;
-    const pageContent = pagesRef.current[pageNumber - 1];
-    
-    if (pageContent) {
-      canvas.loadFromJSON(pageContent, canvas.renderAll.bind(canvas));
-    } else {
-      canvas.clear();
+  // 音声変換ボタンのクリックハンドラ
+  const handleTextToSpeech = async () => {
+    if (!fabricRef.current || !noteId) return;
+
+    try {
+      setIsOCRProcessing(true);  // 既存のローディング状態を利用
+      setOCRError(null);
+
+      // OCR処理を実行
+      const tempCanvas = document.createElement('canvas');
+      const tempContext = tempCanvas.getContext('2d');
+      const originalCanvas = fabricRef.current.getElement();
+      
+      tempCanvas.width = originalCanvas.width;
+      tempCanvas.height = originalCanvas.height;
+      
+      tempContext.fillStyle = '#ffffff';
+      tempContext.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      tempContext.drawImage(originalCanvas, 0, 0);
+      
+      const imageData = tempCanvas.toDataURL('image/jpeg', 1.0);
+      
+      console.log('OCR用の画像を生成しました');
+      
+      // OCR実行
+      const text = await executeOCR(noteId, currentPage, imageData);
+      console.log('OCR結果:', text);
+
+      // TODO: ここにtext-to-speech処理を追加
+      console.log('音声変換対象テキスト:', text);
+
+    } catch (error) {
+      console.error('音声変換エラー:', error);
+      setOCRError(error instanceof Error ? error.message : '予期せぬエラーが発生しました');
+    } finally {
+      setIsOCRProcessing(false);
     }
+  };
+
+  // ページデータの読み込み
+  const loadPageData = async (pageNumber: number) => {
+    if (!noteId || !fabricRef.current) return;
+
+    try {
+      const page = await getPage(noteId, pageNumber);
+      console.log('取得したページデータ:', page);
+
+      if (page?.content) {
+        try {
+          const canvasData = JSON.parse(page.content);
+          console.log('パースしたキャンバスデータ:', canvasData);
+
+          fabricRef.current.clear();
+          fabricRef.current.loadFromJSON(canvasData, () => {
+            fabricRef.current!.requestRenderAll();
+          });
+
+          // ページ番号インジケータを表示
+          setShowPageIndicator(true);
+          setTimeout(() => {
+            setShowPageIndicator(false);
+          }, 2000);
+
+        } catch (parseError) {
+          console.error('キャンバスデータのパースエラー:', parseError);
+          alert('データの読み込みに失敗しました');
+        }
+      } else {
+        fabricRef.current.clear();
+        // ページ番号インジケータを表示
+        setShowPageIndicator(true);
+        setTimeout(() => {
+          setShowPageIndicator(false);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('ページ読み込みエラー:', error);
+      alert('ページの読み込みに失敗しました');
+    }
+  };
+
+  // ページ番号クリックハンドラ
+  const handlePageNumberClick = (pageNumber: number) => {
+    if (pageNumber === currentPage) return;
+    handlePageChange(pageNumber);
   };
 
   // タッチイベントハンドラー
@@ -378,11 +434,24 @@ export function NoteEditor() {
           ← 戻る
         </button>
         <div className="flex space-x-4">
-          <button className="px-4 py-2 text-sm font-medium bg-[#232B3A] border border-white rounded-md hover:bg-[#232B3A]/90 transition-colors">
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 text-sm font-medium bg-[#232B3A] border border-white rounded-md hover:bg-[#232B3A]/90 transition-colors"
+          >
             保存
           </button>
-          <button className="px-4 py-2 text-sm font-medium bg-[#232B3A] border border-white rounded-md hover:bg-[#232B3A]/90 transition-colors">
-            音声変換
+          <button
+            onClick={handleTextToSpeech}
+            disabled={isOCRProcessing}
+            className={`px-4 py-2 text-sm font-medium ${
+              isOCRProcessing ? 'bg-gray-300' : 'bg-[#232B3A]'
+            } border border-white rounded-md hover:bg-[#232B3A]/90 transition-colors`}
+          >
+            {isOCRProcessing ? (
+              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              '音声変換'
+            )}
           </button>
         </div>
       </div>
@@ -428,10 +497,23 @@ export function NoteEditor() {
           />
         </div>
 
-        {/* ページインジケータ */}
+        {/* OCRエラー表示 */}
+        {ocrError && (
+          <div className="fixed bottom-20 left-6 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg">
+            <p>{ocrError}</p>
+            <button
+              onClick={() => setOCRError(null)}
+              className="ml-2 underline hover:no-underline"
+            >
+              閉じる
+            </button>
+          </div>
+        )}
+
+        {/* ページ番号インジケータ */}
         {showPageIndicator && (
-          <div className="fixed bottom-8 left-8 bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg text-lg">
-            {currentPage} / {totalPages}
+          <div className="fixed left-6 bottom-6 bg-gray-800/80 text-white px-4 py-2 rounded-lg font-medium text-sm transition-opacity duration-300">
+            {currentPage} / 10
           </div>
         )}
       </div>

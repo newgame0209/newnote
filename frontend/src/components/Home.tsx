@@ -1,19 +1,21 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Grid, List, Calendar, Filter, Settings, Trash2 } from 'lucide-react';
 import { AnimatedText } from "@/components/ui/animated-text";
 import { NewNoteModal } from "@/components/NewNoteModal";
 import { DeleteNoteDialog } from "@/components/DeleteNoteDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import { useNotes } from '@/contexts/NoteContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
+import { useNotes } from "@/contexts/NoteContext";
+import { Note, CreateNoteData } from "@/types/note";
+import { getDisplayCategory } from '@/types/categories';
 
 interface Note {
   id: string;
   title: string;
-  mainCategory: string;
-  subCategory: string;
-  createdAt: string;
-  updatedAt: string;
+  main_category: string;
+  sub_category: string;
+  created_at: string;
+  updated_at: string;
   type: string;
   size: string;
   orientation: string;
@@ -25,14 +27,18 @@ export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [noteToDelete, setNoteToDelete] = React.useState<{ id: string; title: string } | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [activeTab, setActiveTab] = useState('category');
-  const { notes, addNote, deleteNote } = useNotes();
+  const [activeTab, setActiveTab] = useState<'category' | 'date'>('category');
+  const { notes, addNote, deleteNote, fetchNotes, loading, error } = useNotes();
   const navigate = useNavigate();
 
-  const handleAddNote = useCallback((noteData: { title: string; mainCategory: string; subCategory: string; type: string; size: string; orientation: string; }) => {
-    const newNote = addNote(noteData);
-    setIsNewNoteModalOpen(false);
-    navigate(`/edit/${newNote.id}`);
+  const handleAddNote = useCallback(async (noteData: CreateNoteData) => {
+    try {
+      const newNote = await addNote(noteData);
+      setIsNewNoteModalOpen(false);
+      navigate(`/edit/${newNote.id}`);
+    } catch (error) {
+      console.error('ノートの作成に失敗しました:', error);
+    }
   }, [addNote, navigate]);
 
   const handleDeleteClick = useCallback((id: string, title: string) => {
@@ -50,50 +56,20 @@ export default function Home() {
     return [...notes].sort((a, b) => {
       switch (activeTab) {
         case 'category':
-          const mainCategoryCompare = a.mainCategory.localeCompare(b.mainCategory);
+          const mainCategoryCompare = a.main_category.localeCompare(b.main_category);
           if (mainCategoryCompare !== 0) return mainCategoryCompare;
-          return a.subCategory.localeCompare(b.subCategory);
+          return a.sub_category.localeCompare(b.sub_category);
         
         case 'date':
-          const bDate = new Date(b.updatedAt).getTime();
-          const aDate = new Date(a.updatedAt).getTime();
+          const bDate = new Date(b.updated_at).getTime();
+          const aDate = new Date(a.updated_at).getTime();
           return bDate - aDate;
-        
-        case 'type':
-          const typeCompare = a.type.localeCompare(b.type);
-          if (typeCompare !== 0) return typeCompare;
-          return a.size.localeCompare(b.size);
         
         default:
           return 0;
       }
     });
   }, [notes, activeTab]);
-
-  const getDisplayCategory = (category: string): string => {
-    const categoryMap: { [key: string]: string } = {
-      'work': '仕事',
-      'study': '学習',
-      'personal': 'プライベート',
-      'meeting': '会議',
-      'report': 'レポート',
-      'strategy': '戦略企画',
-      'brainstorming': 'アイデア/ブレスト',
-      'memo': '業務連絡とメモ',
-      'math': '数学',
-      'physics': '物理',
-      'science': '科学',
-      'english': '英語',
-      'history': '歴史',
-      'literature': '文学',
-      'exam': '試験対策',
-      'diary': '日記',
-      'hobby': '趣味',
-      'travel': '旅行',
-      'shopping': '家計簿/買い物リスト'
-    };
-    return categoryMap[category] || category;
-  };
 
   const getDisplayOrientation = (orientation: string): string => {
     return orientation === 'portrait' ? '縦向き' : '横向き';
@@ -130,21 +106,20 @@ export default function Home() {
           </button>
         </div>
         <div className="mt-2 flex items-center text-sm text-gray-500">
-          <span>{getDisplayCategory(note.mainCategory)}</span>
+          <span>{getDisplayCategory(note.main_category)}</span>
           <span className="mx-2">•</span>
-          <span>{getDisplayCategory(note.subCategory)}</span>
-        </div>
-        <div className="mt-2 flex items-center text-sm text-gray-500">
-          <span>{note.size}</span>
-          <span className="mx-2">•</span>
-          <span>{getDisplayOrientation(note.orientation)}</span>
+          <span>{getDisplayCategory(note.sub_category)}</span>
         </div>
         <div className="mt-2 text-sm text-gray-500">
-          {note.updatedAt}
+          {new Date(note.updated_at).toLocaleDateString('ja-JP')}
         </div>
       </div>
     );
   }, [handleDeleteClick, navigate]);
+
+  useEffect(() => {
+    fetchNotes();
+  }, []); 
 
   return (
     <div className="min-h-full">
@@ -193,16 +168,6 @@ export default function Home() {
                   onClick={() => setActiveTab('date')}
                 >
                   日付
-                </button>
-                <button
-                  className={`py-4 px-1 text-base font-medium border-b-2 ${
-                    activeTab === 'type' 
-                      ? 'border-primary-500 text-primary-600' 
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                  }`}
-                  onClick={() => setActiveTab('type')}
-                >
-                  タイプ
                 </button>
               </nav>
 
