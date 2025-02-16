@@ -76,9 +76,6 @@ export function NoteEditor() {
     pagesRef.current[currentPage - 1] = undefined;
   };
 
-  // ページ番号表示用のテキストオブジェクトを管理するRef
-  const pageNumberTextRef = useRef<fabric.Text | null>(null);
-
   // キャンバスの初期化
   useEffect(() => {
     const initCanvas = () => {
@@ -95,21 +92,9 @@ export function NoteEditor() {
         height: window.innerHeight - 100,
         preserveObjectStacking: true,
         backgroundColor: '#ffffff',  // 白色の背景を設定
+        selection: false,  // 選択機能を初期状態で無効化
+        selectable: false, // オブジェクトの選択を初期状態で無効化
       });
-
-      // ページ番号テキストの作成
-      const pageText = new window.fabric.Text(`Page ${currentPage}`, {
-        left: 20,
-        top: canvas.height - 40,
-        fontSize: 16,
-        fill: '#666',
-        selectable: false,
-        evented: false,
-        hasControls: false,
-        hasBorders: false,
-      });
-      canvas.add(pageText);
-      pageNumberTextRef.current = pageText;
 
       canvas.on('after:render', () => {
         console.log('キャンバス再描画完了');
@@ -138,14 +123,6 @@ export function NoteEditor() {
   const handlePageChange = (newPage: number) => {
     if (newPage === currentPage) return;
     
-    // ページ番号テキストを更新
-    if (pageNumberTextRef.current) {
-      pageNumberTextRef.current.set({
-        text: `Page ${newPage}`
-      });
-      fabricRef.current?.requestRenderAll();
-    }
-    
     setCurrentPage(newPage);
     loadPageData(newPage);
   };
@@ -155,37 +132,46 @@ export function NoteEditor() {
     if (!isCanvasReady || !fabricRef.current) return;
     const canvas = fabricRef.current;
 
-    // 前回のツールの状態をリセット
+    // 描画モードをリセット
     canvas.isDrawingMode = false;
-    canvas.selection = true;
-    canvas.forEachObject((obj) => {
-      obj.selectable = true;
-      obj.evented = true;
-    });
 
-    switch (currentTool) {
-      case 'pen':
-        canvas.isDrawingMode = true;
-        configurePen(canvas);
-        break;
-      case 'eraser':
-        canvas.isDrawingMode = true;
-        configureEraser(canvas);
-        break;
-      case 'marker':
-        canvas.isDrawingMode = true;
-        configureMarker(canvas);
-        break;
-      case 'view':
-        // 視覚モードの場合のみ、オブジェクトの選択と操作を無効化
-        canvas.isDrawingMode = false;
-        canvas.selection = false;
-        canvas.forEachObject((obj) => {
-          obj.selectable = false;
-          obj.evented = false;
-        });
-        break;
+    if (currentTool === 'view') {
+      // 視覚モードの場合
+      canvas.isDrawingMode = false;
+      canvas.selection = false;
+      canvas.skipTargetFind = true; // ターゲット検出を完全にスキップ
+      canvas.hoverCursor = 'default';
+      canvas.moveCursor = 'default';
+      canvas.defaultCursor = 'default';
+      canvas.forEachObject((obj) => {
+        obj.selectable = false;
+        obj.evented = false;
+        obj.hasControls = false;
+        obj.hasBorders = false;
+        obj.lockMovementX = true;
+        obj.lockMovementY = true;
+        obj.hoverCursor = 'default';
+      });
+      document.body.style.overflow = 'auto';
+    } else {
+      // 描画モードの場合
+      canvas.isDrawingMode = true;
+      document.body.style.overflow = 'hidden';
+      
+      switch (currentTool) {
+        case 'pen':
+          configurePen(canvas);
+          break;
+        case 'eraser':
+          configureEraser(canvas);
+          break;
+        case 'marker':
+          configureMarker(canvas);
+          break;
+      }
     }
+
+    canvas.renderAll();
   }, [currentTool, isCanvasReady]);
 
   // ペンの設定を管理する関数
@@ -226,47 +212,6 @@ export function NoteEditor() {
     brush.strokeLineCap = 'round';
     brush.strokeLineJoin = 'round';
   };
-
-  // 視覚モードの状態管理
-  useEffect(() => {
-    if (!fabricRef.current) return;
-
-    const canvas = fabricRef.current;
-    if (currentTool === 'view') {
-      // 視覚モードの場合
-      canvas.isDrawingMode = false;
-      canvas.selection = false;
-      canvas.forEachObject((obj) => {
-        obj.selectable = false;
-        obj.evented = false;
-      });
-      document.body.style.overflow = 'auto';
-    } else {
-      // その他のモードの場合
-      canvas.selection = true;
-      canvas.forEachObject((obj) => {
-        obj.selectable = true;
-        obj.evented = true;
-      });
-      document.body.style.overflow = 'hidden';
-
-      // ツール別の設定
-      switch (currentTool) {
-        case 'pen':
-          canvas.isDrawingMode = true;
-          configurePen(canvas);
-          break;
-        case 'eraser':
-          canvas.isDrawingMode = true;
-          configureEraser(canvas);
-          break;
-        case 'marker':
-          canvas.isDrawingMode = true;
-          configureMarker(canvas);
-          break;
-      }
-    }
-  }, [currentTool]);
 
   // 保存ボタンのクリックハンドラ
   const handleSave = async () => {
