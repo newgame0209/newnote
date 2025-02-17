@@ -13,14 +13,23 @@ export default defineConfig({
     include: ['fabric']
   },
   server: {
-    host: '0.0.0.0',
+    host: true,
     port: 3000,
     strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:5001',
-        changeOrigin: true
+        changeOrigin: true,
+        secure: false
       }
+    },
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Resource-Policy': 'same-site'
     }
+  },
+  define: {
+    'process.env.MEMO_API_URL': JSON.stringify('http://192.168.0.89:5002/api'),
   }
 })

@@ -415,45 +415,47 @@ export function NoteEditor() {
   }, [fetchNotes]);
 
   return (
-    <div className="h-screen w-screen flex flex-col">
-      {/* ヘッダー */}
-      <div className="h-16 px-4 flex items-center justify-between bg-[#232B3A] text-white">
-        <button
-          onClick={() => navigate('/')}
-          className="hover:text-gray-300 transition-colors"
-        >
-          ← 戻る
-        </button>
-        {/* タイトルを中央に配置 */}
-        <div className="absolute left-1/2 transform -translate-x-1/2">
-          <h1 className="text-white font-medium">
-            {currentNote?.title || ''}
-          </h1>
+    <div className="min-h-screen bg-white">
+      <header className="bg-[#232B3A] text-white">
+        <div className="mx-auto px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/')}
+                className="rounded-md hover:bg-white/10 p-1"
+              >
+                ← 戻る
+              </button>
+              <h1 className="text-lg font-semibold max-sm:max-w-[150px] max-sm:truncate">
+                {currentNote?.title || ''}
+              </h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSave}
+                className="max-sm:px-3 px-4 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-sm font-medium"
+              >
+                保存
+              </button>
+              <button
+                onClick={handleTextToSpeech}
+                disabled={isOCRProcessing || isPlaying}
+                className={`max-sm:px-3 px-4 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-sm font-medium ${
+                  isOCRProcessing || isPlaying ? 'bg-gray-300' : ''
+                }`}
+              >
+                {isOCRProcessing ? (
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : isPlaying ? (
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  '音声変換'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex space-x-4">
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 text-sm font-medium bg-[#232B3A] border border-white rounded-md hover:bg-[#232B3A]/90 transition-colors"
-          >
-            保存
-          </button>
-          <button
-            onClick={handleTextToSpeech}
-            disabled={isOCRProcessing || isPlaying}
-            className={`px-4 py-2 text-sm font-medium ${
-              isOCRProcessing || isPlaying ? 'bg-gray-300' : 'bg-[#232B3A]'
-            } border border-white rounded-md hover:bg-[#232B3A]/90 transition-colors`}
-          >
-            {isOCRProcessing ? (
-              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : isPlaying ? (
-              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              '音声変換'
-            )}
-          </button>
-        </div>
-      </div>
+      </header>
 
       {/* ツールバー */}
       <div className="h-12 px-4 flex items-center space-x-4 bg-white border-b">
