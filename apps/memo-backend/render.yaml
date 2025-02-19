@@ -1,0 +1,35 @@
+services:
+  # メモアプリバックエンド
+  - type: web
+    name: memo-backend
+    env: python
+    region: singapore  # アジア圏で低レイテンシー
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    healthCheckPath: /health  # ヘルスチェックエンドポイント
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: DEBUG
+        value: false
+      - key: DATABASE_URL
+        sync: false  # Renderダッシュボードで設定
+      - key: GOOGLE_CLOUD_PROJECT
+        sync: false  # Renderダッシュボードで設定
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        sync: false  # Renderダッシュボードで設定
+      - key: PORT
+        value: 5002
+      - key: CORS_ORIGINS
+        sync: false  # Renderダッシュボードで設定
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FILE
+        value: logs/memo-backend.log
+
+    # スケーリング設定
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+      targetMemoryPercent: 80
+      targetCPUPercent: 80

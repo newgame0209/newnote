@@ -1,0 +1,26 @@
+services:
+  # メモアプリフロントエンド
+  - type: web
+    name: memo-frontend
+    env: node
+    region: singapore  # アジア圏で低レイテンシー
+    buildCommand: npm install && npm run build
+    startCommand: npm run preview
+    staticPublishPath: ./dist  # ビルド後の静的ファイルのパス
+    envVars:
+      - key: VITE_API_URL
+        sync: false  # Renderダッシュボードで設定
+      - key: VITE_API_TIMEOUT
+        value: 5000
+      - key: VITE_APP_NAME
+        value: "メモアプリ"
+      - key: VITE_APP_VERSION
+        value: 1.0.0
+      - key: NODE_VERSION
+        value: 18.x  # Node.jsバージョン指定
+
+    # 静的サイト設定
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
