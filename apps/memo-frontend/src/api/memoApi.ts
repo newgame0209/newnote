@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Memo, CreateMemoRequest, UpdateMemoRequest } from '../types/memo';
 
-const BASE_URL = 'http://localhost:5002/api/memo';
+const BASE_URL = '/api/memo';
 
 export const memoApi = {
   // メモを作成

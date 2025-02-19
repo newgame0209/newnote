@@ -2,6 +2,7 @@ from flask import Flask
 from flask_cors import CORS
 from routes.memo import memo_bp
 from database import init_db, shutdown_session
+import os
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
@@ -18,6 +19,10 @@ CORS(app,
              "supports_credentials": True
          }
      })
+
+# Google Cloud認証情報のパスを設定
+credentials_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'amiable-hour-446600-s5-accc791c2e4d.json')
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
 
 # データベースの初期化
 init_db()
