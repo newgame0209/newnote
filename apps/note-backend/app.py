@@ -23,7 +23,9 @@ def create_app():
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
 
     app = Flask(__name__)
-    app.debug = True  # デバッグモードを有効化
+    
+    # デバッグモードを環境変数から設定
+    app.debug = os.getenv('APP_DEBUG', 'false').lower() == 'true'
 
     # ログ設定
     if not os.path.exists('logs'):

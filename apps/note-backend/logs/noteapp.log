@@ -3676,3 +3676,13 @@ Cookie: mp_9c85fda7212d269ea46c3f6a57ba69ca_mixpanel=%7B%22distinct_id%22%3A%20%
 2025-02-20 10:32:49,481 [INFO] sqlalchemy.engine.Engine:2696 - COMMIT
 2025-02-20 10:32:49,682 [WARNING] werkzeug:97 -  * Debugger is active!
 2025-02-20 10:32:49,690 [INFO] werkzeug:97 -  * Debugger PIN: 731-363-755
+2025-02-20 10:58:09,677 [INFO] werkzeug:97 -  * Detected change in '/Users/mishimayu/Desktop/newnote/apps/note-backend/app.py', reloading
+2025-02-20 10:58:09,904 [INFO] werkzeug:97 -  * Restarting with stat
+2025-02-20 10:58:10,500 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-20 10:58:10,500 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("notes")
+2025-02-20 10:58:10,501 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:58:10,501 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("pages")
+2025-02-20 10:58:10,501 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:58:10,501 [INFO] sqlalchemy.engine.Engine:2696 - COMMIT
+2025-02-20 10:58:10,931 [WARNING] werkzeug:97 -  * Debugger is active!
+2025-02-20 10:58:10,944 [INFO] werkzeug:97 -  * Debugger PIN: 731-363-755
