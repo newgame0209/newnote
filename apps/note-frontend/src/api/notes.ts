@@ -115,7 +115,7 @@ export const getPage = async (noteId: string | number, pageNumber: number): Prom
  */
 export const executeOCR = async (noteId: number, pageNumber: number, imageData: string): Promise<string> => {
   try {
-    const response = await axiosInstance.post<{ text: string }>(`/notes/${noteId}/pages/${pageNumber}/ocr`, { image: imageData });
+    const response = await axiosInstance.post<{ text: string }>(`https://newnote-backend.onrender.com/api/notes/${noteId}/pages/${pageNumber}/ocr`, { image: imageData });
     return response.data.text;
   } catch (error) {
     console.error('OCR処理エラー:', error);
@@ -145,7 +145,7 @@ export const synthesizeSpeech = async (
       }
     };
 
-    const response = await axiosInstance.post('/tts', {
+    const response = await axiosInstance.post('https://newnote-backend.onrender.com/api/tts', {
       text,
       voice: {
         language_code: 'ja-JP',
