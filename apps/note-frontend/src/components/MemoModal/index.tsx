@@ -23,7 +23,7 @@ interface MemoModalProps {
     mainCategory?: string;
     subCategory?: string;
     content: string;
-  }) => void;
+  }) => Promise<{ id: number }>;
 }
 
 interface MemoSettings {
@@ -83,14 +83,24 @@ const MemoModal = ({ open, onOpenChange, onMemoCreate }: MemoModalProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      onMemoCreate({
+      const newMemo = await onMemoCreate({
         title: settings.title,
         content: "",
         mainCategory: settings.mainCategory,
         subCategory: settings.subCategory,
       });
+      onOpenChange(false);
+      setSettings({
+        mainCategory: "",
+        subCategory: "",
+        title: "",
+      });
+      // 新しく作成されたメモのIDを使用してリダイレクト
+      if (newMemo) {
+        navigate(`/memo/edit/${newMemo.id}`);
+      }
     } catch (error) {
-      console.error('Error creating memo:', error);
+      console.error('メモの作成に失敗しました:', error);
     }
   };
 
