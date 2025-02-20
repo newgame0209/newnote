@@ -7,6 +7,9 @@ import os
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 
+# デバッグモードを環境変数から設定
+app.debug = os.getenv('DEBUG', 'false').lower() == 'true'
+
 # CORSの設定
 CORS(app, 
      resources={
@@ -33,9 +36,13 @@ app.teardown_appcontext(shutdown_session)
 # APIルートの登録（プレフィックスを/api/memoに変更）
 app.register_blueprint(memo_bp, url_prefix='/api/memo')
 
+@app.route('/health')
+def health_check():
+    return {'status': 'ok'}, 200
+
 @app.errorhandler(500)
 def handle_500_error(error):
     return {'error': 'Internal Server Error'}, 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5002, debug=True)
+    app.run(host='0.0.0.0', port=5002)
