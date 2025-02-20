@@ -5,7 +5,7 @@ services:
     env: python
     region: singapore  # アジア圏で低レイテンシー
     buildCommand: pip install -r requirements.txt
-    startCommand: python app.py
+    startCommand: gunicorn wsgi:app
     healthCheckPath: /health  # ヘルスチェックエンドポイント
     envVars:
       - key: FLASK_ENV
