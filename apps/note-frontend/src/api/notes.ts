@@ -1,8 +1,15 @@
 import { Note, CreateNoteData } from '../types/note';
-import axios from 'axios'; // axiosをインポートする
+import axios from 'axios';
 
-// 相対パスを使用
-export const API_BASE_URL = '/api';
+const API_BASE_URL = import.meta.env.VITE_NOTE_API_URL || 'http://localhost:5001/api';
+
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
+  }
+});
 
 /**
  * ノート作成APIを呼び出す
@@ -10,20 +17,8 @@ export const API_BASE_URL = '/api';
  */
 export const createNote = async (data: CreateNoteData): Promise<Note> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'ノートの作成に失敗しました');
-    }
-
-    return response.json();
+    const response = await axiosInstance.post('/notes', data);
+    return response.data;
   } catch (error) {
     console.error('Error creating note:', error);
     throw new Error('ノートの作成中にエラーが発生しました');
@@ -36,14 +31,8 @@ export const createNote = async (data: CreateNoteData): Promise<Note> => {
  */
 export const fetchNote = async (id: string): Promise<Note> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notes/${id}`);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'ノートの取得に失敗しました');
-    }
-
-    return response.json();
+    const response = await axiosInstance.get(`/notes/${id}`);
+    return response.data;
   } catch (error) {
     console.error('Error fetching note:', error);
     throw new Error('ノートの取得中にエラーが発生しました');
@@ -57,20 +46,8 @@ export const fetchNote = async (id: string): Promise<Note> => {
  */
 export const updateNote = async (id: string, data: Partial<CreateNoteData>): Promise<Note> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'ノートの更新に失敗しました');
-    }
-
-    return response.json();
+    const response = await axiosInstance.put(`/notes/${id}`, data);
+    return response.data;
   } catch (error) {
     console.error('Error updating note:', error);
     throw new Error('ノートの更新中にエラーが発生しました');
@@ -83,14 +60,7 @@ export const updateNote = async (id: string, data: Partial<CreateNoteData>): Pro
  */
 export const deleteNote = async (id: string): Promise<void> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'ノートの削除に失敗しました');
-    }
+    await axiosInstance.delete(`/notes/${id}`);
   } catch (error) {
     console.error('Error deleting note:', error);
     throw new Error('ノートの削除中にエラーが発生しました');
@@ -102,54 +72,34 @@ export const deleteNote = async (id: string): Promise<void> => {
  */
 export const fetchNotes = async (): Promise<Note[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notes`);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'ノート一覧の取得に失敗しました');
-    }
-
-    return response.json();
+    const response = await axiosInstance.get('/notes');
+    return response.data;
   } catch (error) {
     console.error('Error fetching notes:', error);
     throw new Error('ノート一覧の取得中にエラーが発生しました');
   }
 };
 
-// ページの保存
+/**
+ * ページの保存
+ */
 export const updatePage = async (noteId: string | number, pageNumber: number, content: string): Promise<any> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notes/${noteId}/pages/${pageNumber}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ content })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'ページの保存に失敗しました');
-    }
-
-    return response.json();
+    const response = await axiosInstance.put(`/notes/${noteId}/pages/${pageNumber}`, { content });
+    return response.data;
   } catch (error) {
     console.error('Error updating page:', error);
     throw error;
   }
 };
 
-// ページの取得
+/**
+ * ページの取得
+ */
 export const getPage = async (noteId: string | number, pageNumber: number): Promise<any> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/notes/${noteId}/pages/${pageNumber}`);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'ページの取得に失敗しました');
-    }
-
-    return response.json();
+    const response = await axiosInstance.get(`/notes/${noteId}/pages/${pageNumber}`);
+    return response.data;
   } catch (error) {
     console.error('Error fetching page:', error);
     throw error;
@@ -165,10 +115,7 @@ export const getPage = async (noteId: string | number, pageNumber: number): Prom
  */
 export const executeOCR = async (noteId: number, pageNumber: number, imageData: string): Promise<string> => {
   try {
-    const response = await axios.post<{ text: string }>(
-      `${API_BASE_URL}/notes/${noteId}/pages/${pageNumber}/ocr`,
-      { image: imageData }
-    );
+    const response = await axiosInstance.post<{ text: string }>(`/notes/${noteId}/pages/${pageNumber}/ocr`, { image: imageData });
     return response.data.text;
   } catch (error) {
     console.error('OCR処理エラー:', error);
@@ -198,26 +145,17 @@ export const synthesizeSpeech = async (
       }
     };
 
-    const response = await fetch(`${API_BASE_URL}/tts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text,
-        voice: {
-          language_code: 'ja-JP',
-          ...voiceConfig[voiceType]
-        }
-      }),
+    const response = await axiosInstance.post('/tts', {
+      text,
+      voice: {
+        language_code: 'ja-JP',
+        ...voiceConfig[voiceType]
+      }
+    }, {
+      responseType: 'blob'
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || '音声の生成に失敗しました');
-    }
-
-    return response.blob();
+    return response.data;
   } catch (error) {
     console.error('Error synthesizing speech:', error);
     throw new Error('音声の生成中にエラーが発生しました');
