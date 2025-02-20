@@ -6,10 +6,27 @@ import traceback
 
 memo_bp = Blueprint('memo', __name__)
 
-@memo_bp.route('/memos', methods=['POST', 'OPTIONS'])
+@memo_bp.route('/memos', methods=['GET', 'POST', 'OPTIONS'])
 def create_memo():
     if request.method == 'OPTIONS':
         return '', 204
+    
+    if request.method == 'GET':
+        try:
+            memos = Memo.query.order_by(Memo.created_at.desc()).all()
+            return jsonify([{
+                'id': memo.id,
+                'title': memo.title,
+                'content': memo.content,
+                'mainCategory': memo.main_category,
+                'subCategory': memo.sub_category,
+                'createdAt': memo.created_at,
+                'updatedAt': memo.updated_at
+            } for memo in memos])
+        except SQLAlchemyError as e:
+            db_session.rollback()
+            return jsonify({'error': 'データベースエラー'}), 500
+    
     try:
         data = request.get_json()
         memo = Memo(
@@ -30,11 +47,9 @@ def create_memo():
             'createdAt': memo.created_at,
             'updatedAt': memo.updated_at
         }), 201
-    except Exception as e:
+    except SQLAlchemyError as e:
         db_session.rollback()
-        print(f"Error creating memo: {str(e)}")
-        print(traceback.format_exc())
-        return jsonify({'error': '保存に失敗しました'}), 500
+        return jsonify({'error': 'データベースエラー'}), 500
 
 @memo_bp.route('/memos/list', methods=['GET', 'OPTIONS'])
 def get_memos():
