@@ -125,7 +125,7 @@ const MemoEditor = () => {
         audioUrlRef.current = null;
       }
 
-      const response = await fetch('/api/tts', {
+      const response = await fetch(`${process.env.VITE_NOTE_API_URL}/tts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
