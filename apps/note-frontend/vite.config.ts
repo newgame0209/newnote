@@ -24,6 +24,10 @@ export default defineConfig({
       }
     }
   },
+  base: './',
+  server: {
+    base: './',
+  },
   define: {
     'process.env.VITE_NOTE_API_URL': JSON.stringify('https://newnote-backend.onrender.com/api'),
     'process.env.VITE_MEMO_API_URL': JSON.stringify('https://memo-backend-7va4.onrender.com/api')
