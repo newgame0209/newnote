@@ -19,9 +19,14 @@ def create_app():
     Returns:
         Flask: 設定済みのFlaskアプリケーション
     """
-    # Google Cloud認証情報のパスを環境変数から設定
-    credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
+    # Google Cloud認証情報を環境変数から設定
+    credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    if credentials_json:
+        # 一時ファイルに認証情報を書き出し
+        temp_credentials_path = '/tmp/google_credentials.json'
+        with open(temp_credentials_path, 'w') as f:
+            f.write(credentials_json)
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = temp_credentials_path
 
     app = Flask(__name__)
     
