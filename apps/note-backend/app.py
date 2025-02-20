@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy.exc import SQLAlchemyError
 import logging
+import json
 
 # .envファイルから環境変数を読み込む
 load_dotenv()
@@ -18,8 +19,8 @@ def create_app():
     Returns:
         Flask: 設定済みのFlaskアプリケーション
     """
-    # Google Cloud認証情報のパスを設定
-    credentials_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'amiable-hour-446600-s5-accc791c2e4d.json')
+    # Google Cloud認証情報のパスを環境変数から設定
+    credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
 
     app = Flask(__name__)
