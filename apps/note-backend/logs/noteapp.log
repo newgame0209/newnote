@@ -3634,3 +3634,45 @@ Cookie: mp_9c85fda7212d269ea46c3f6a57ba69ca_mixpanel=%7B%22distinct_id%22%3A%20%
 
 
 2025-02-19 08:57:14,275 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 08:57:14] "GET /api/notes HTTP/1.1" 200 -
+2025-02-20 10:28:04,534 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-20 10:28:04,534 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("notes")
+2025-02-20 10:28:04,534 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:28:04,535 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("pages")
+2025-02-20 10:28:04,535 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:28:04,535 [INFO] sqlalchemy.engine.Engine:2696 - COMMIT
+2025-02-20 10:28:05,000 [INFO] werkzeug:97 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2025-02-20 10:28:05,000 [INFO] werkzeug:97 - [33mPress CTRL+C to quit[0m
+2025-02-20 10:28:05,001 [INFO] werkzeug:97 -  * Restarting with stat
+2025-02-20 10:28:05,241 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-20 10:28:05,242 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("notes")
+2025-02-20 10:28:05,242 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:28:05,242 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("pages")
+2025-02-20 10:28:05,242 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:28:05,242 [INFO] sqlalchemy.engine.Engine:2696 - COMMIT
+2025-02-20 10:28:05,430 [WARNING] werkzeug:97 -  * Debugger is active!
+2025-02-20 10:28:05,441 [INFO] werkzeug:97 -  * Debugger PIN: 731-363-755
+2025-02-20 10:32:28,660 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-20 10:32:28,661 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("notes")
+2025-02-20 10:32:28,661 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:32:28,661 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("pages")
+2025-02-20 10:32:28,661 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:32:28,661 [INFO] sqlalchemy.engine.Engine:2696 - COMMIT
+2025-02-20 10:32:48,956 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-20 10:32:48,956 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("notes")
+2025-02-20 10:32:48,956 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:32:48,957 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("pages")
+2025-02-20 10:32:48,957 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:32:48,957 [INFO] sqlalchemy.engine.Engine:2696 - COMMIT
+2025-02-20 10:32:49,245 [INFO] werkzeug:97 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+2025-02-20 10:32:49,246 [INFO] werkzeug:97 - [33mPress CTRL+C to quit[0m
+2025-02-20 10:32:49,246 [INFO] werkzeug:97 -  * Restarting with stat
+2025-02-20 10:32:49,480 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-20 10:32:49,480 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("notes")
+2025-02-20 10:32:49,480 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:32:49,481 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("pages")
+2025-02-20 10:32:49,481 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-20 10:32:49,481 [INFO] sqlalchemy.engine.Engine:2696 - COMMIT
+2025-02-20 10:32:49,682 [WARNING] werkzeug:97 -  * Debugger is active!
+2025-02-20 10:32:49,690 [INFO] werkzeug:97 -  * Debugger PIN: 731-363-755
