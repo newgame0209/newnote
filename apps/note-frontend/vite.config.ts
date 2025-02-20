@@ -12,24 +12,16 @@ export default defineConfig({
   optimizeDeps: {
     include: ['fabric']
   },
-  server: {
-    host: true,
-    port: 3000,
-    strictPort: true,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5001',
-        changeOrigin: true,
-        secure: false
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          fabric: ['fabric']
+        }
       }
-    },
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Cross-Origin-Resource-Policy': 'same-site'
     }
-  },
-  define: {
-    'process.env.MEMO_API_URL': JSON.stringify('http://192.168.0.89:5002/api'),
   }
 })
