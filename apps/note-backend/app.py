@@ -27,6 +27,19 @@ def create_app():
     # デバッグモードを環境変数から設定
     app.debug = os.getenv('APP_DEBUG', 'false').lower() == 'true'
 
+    # CORSの設定
+    CORS(app, 
+         resources={
+             r"/api/*": {
+                 "origins": ["https://mynote-psi-three.vercel.app", "http://localhost:3000"],
+                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                 "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+                 "expose_headers": ["Content-Type"],
+                 "max_age": 600,
+                 "supports_credentials": True
+             }
+         })
+
     # ログ設定
     if not os.path.exists('logs'):
         os.makedirs('logs')
@@ -47,20 +60,6 @@ def create_app():
 
     # データベースの初期化
     init_db()
-
-    # CORSヘッダーを全てのレスポンスに追加
-    @app.after_request
-    def after_request(response):
-        logging.info(f"Request method: {request.method}")
-        logging.info(f"Request headers: {request.headers}")
-        
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        
-        if request.method == 'OPTIONS':
-            return make_response()
-        return response
 
     # ルートエンドポイント（動作確認用）
     @app.route('/')
@@ -84,29 +83,6 @@ def create_app():
             return jsonify({'message': 'データベースエラーが発生しました'}), 500
         logging.error(f"Error occurred: {error}")
         return jsonify({"error": str(error)}), 500
-
-    # ノート一覧取得API
-    @app.route('/api/notes', methods=['GET'])
-    def get_notes():
-        """
-        ノート一覧を取得するエンドポイント
-        """
-        try:
-            db = get_db()
-            notes = db.query(Note).order_by(Note.updated_at.desc()).all()
-            return jsonify([{
-                'id': str(note.id),
-                'title': note.title,
-                'main_category': note.main_category,
-                'sub_category': note.sub_category,
-                'created_at': note.created_at.isoformat(),
-                'updated_at': note.updated_at.isoformat()
-            } for note in notes]), 200
-        except Exception as e:
-            logging.error(f"Error fetching notes: {str(e)}")
-            return jsonify({'message': 'ノート一覧の取得に失敗しました'}), 500
-        finally:
-            db.close()
 
     return app
 
