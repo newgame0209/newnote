@@ -23,7 +23,7 @@ interface MemoModalProps {
     mainCategory?: string;
     subCategory?: string;
     content: string;
-  }) => Promise<{ id: number }>;
+  }) => Promise<Memo>;
 }
 
 interface MemoSettings {
