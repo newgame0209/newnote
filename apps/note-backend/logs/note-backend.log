@@ -1,0 +1,135 @@
+2025-02-19 09:22:46,713 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:22:46,713 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("notes")
+2025-02-19 09:22:46,713 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-19 09:22:46,714 [INFO] sqlalchemy.engine.Engine:1848 - PRAGMA main.table_info("pages")
+2025-02-19 09:22:46,714 [INFO] sqlalchemy.engine.Engine:1848 - [raw sql] ()
+2025-02-19 09:22:46,714 [INFO] sqlalchemy.engine.Engine:2696 - COMMIT
+2025-02-19 09:22:47,061 [WARNING] werkzeug:97 -  * Debugger is active!
+2025-02-19 09:22:47,076 [INFO] werkzeug:97 -  * Debugger PIN: 731-363-755
+2025-02-19 09:24:53,269 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Note|notes) _post_configure_properties() started
+2025-02-19 09:24:53,272 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Note|notes) initialize prop pages
+2025-02-19 09:24:53,276 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2324 - Note.pages setup primary join notes.id = pages.note_id
+2025-02-19 09:24:53,276 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2325 - Note.pages setup secondary join None
+2025-02-19 09:24:53,277 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2326 - Note.pages synchronize pairs [(notes.id => pages.note_id)]
+2025-02-19 09:24:53,277 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2333 - Note.pages secondary synchronize pairs []
+2025-02-19 09:24:53,277 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2341 - Note.pages local/remote pairs [(notes.id / pages.note_id)]
+2025-02-19 09:24:53,278 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2348 - Note.pages remote columns [pages.note_id]
+2025-02-19 09:24:53,278 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2353 - Note.pages local columns [notes.id]
+2025-02-19 09:24:53,278 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2358 - Note.pages relationship direction RelationshipDirection.ONETOMANY
+2025-02-19 09:24:53,280 [INFO] sqlalchemy.orm.strategies.LazyLoader:734 - Note.pages lazy loading clause :param_1 = pages.note_id
+2025-02-19 09:24:53,282 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Note|notes) initialize prop id
+2025-02-19 09:24:53,283 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Note|notes) initialize prop title
+2025-02-19 09:24:53,283 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Note|notes) initialize prop main_category
+2025-02-19 09:24:53,283 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Note|notes) initialize prop sub_category
+2025-02-19 09:24:53,283 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Note|notes) initialize prop created_at
+2025-02-19 09:24:53,284 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Note|notes) initialize prop updated_at
+2025-02-19 09:24:53,284 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Note|notes) _post_configure_properties() complete
+2025-02-19 09:24:53,284 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Page|pages) _post_configure_properties() started
+2025-02-19 09:24:53,284 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Page|pages) initialize prop note
+2025-02-19 09:24:53,285 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2324 - Page.note setup primary join notes.id = pages.note_id
+2025-02-19 09:24:53,286 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2325 - Page.note setup secondary join None
+2025-02-19 09:24:53,286 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2326 - Page.note synchronize pairs [(notes.id => pages.note_id)]
+2025-02-19 09:24:53,286 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2333 - Page.note secondary synchronize pairs []
+2025-02-19 09:24:53,286 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2341 - Page.note local/remote pairs [(pages.note_id / notes.id)]
+2025-02-19 09:24:53,286 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2348 - Page.note remote columns [notes.id]
+2025-02-19 09:24:53,286 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2353 - Page.note local columns [pages.note_id]
+2025-02-19 09:24:53,286 [INFO] sqlalchemy.orm.relationships.RelationshipProperty:2358 - Page.note relationship direction RelationshipDirection.MANYTOONE
+2025-02-19 09:24:53,288 [INFO] sqlalchemy.orm.strategies.LazyLoader:734 - Page.note lazy loading clause notes.id = :param_1
+2025-02-19 09:24:53,288 [INFO] sqlalchemy.orm.strategies.LazyLoader:760 - Page.note will use Session.get() to optimize instance loads
+2025-02-19 09:24:53,292 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Page|pages) initialize prop id
+2025-02-19 09:24:53,292 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Page|pages) initialize prop note_id
+2025-02-19 09:24:53,292 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Page|pages) initialize prop page_number
+2025-02-19 09:24:53,292 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Page|pages) initialize prop content
+2025-02-19 09:24:53,292 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Page|pages) initialize prop layout_settings
+2025-02-19 09:24:53,292 [INFO] sqlalchemy.orm.mapper.Mapper:2456 - (Page|pages) _post_configure_properties() complete
+2025-02-19 09:24:53,293 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:24:53,299 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes ORDER BY notes.created_at DESC
+2025-02-19 09:24:53,299 [INFO] sqlalchemy.engine.Engine:1848 - [generated in 0.00071s] ()
+2025-02-19 09:24:53,301 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:24:53,301 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:24:53] "GET /api/notes HTTP/1.1" 200 -
+2025-02-19 09:24:53,303 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:24:53,303 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes ORDER BY notes.created_at DESC
+2025-02-19 09:24:53,303 [INFO] sqlalchemy.engine.Engine:1848 - [cached since 0.005063s ago] ()
+2025-02-19 09:24:53,304 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:24:53,304 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:24:53] "GET /api/notes HTTP/1.1" 200 -
+2025-02-19 09:24:54,690 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:24:54,691 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes ORDER BY notes.created_at DESC
+2025-02-19 09:24:54,691 [INFO] sqlalchemy.engine.Engine:1848 - [cached since 1.392s ago] ()
+2025-02-19 09:24:54,692 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:24:54,692 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:24:54] "GET /api/notes HTTP/1.1" 200 -
+2025-02-19 09:24:54,700 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:24:54,709 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes ORDER BY notes.created_at DESC
+2025-02-19 09:24:54,709 [INFO] sqlalchemy.engine.Engine:1848 - [cached since 1.411s ago] ()
+2025-02-19 09:24:54,710 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:24:54,711 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:24:54] "GET /api/notes HTTP/1.1" 200 -
+2025-02-19 09:24:56,347 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:24:56,348 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes ORDER BY notes.created_at DESC
+2025-02-19 09:24:56,349 [INFO] sqlalchemy.engine.Engine:1848 - [cached since 3.05s ago] ()
+2025-02-19 09:24:56,351 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:24:56,354 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:24:56] "GET /api/notes HTTP/1.1" 200 -
+2025-02-19 09:24:56,360 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:24:56,361 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes ORDER BY notes.created_at DESC
+2025-02-19 09:24:56,361 [INFO] sqlalchemy.engine.Engine:1848 - [cached since 3.063s ago] ()
+2025-02-19 09:24:56,364 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:24:56,365 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:24:56] "GET /api/notes HTTP/1.1" 200 -
+2025-02-19 09:24:56,427 [INFO] noteapp:351 - ページ取得リクエスト: ノートID=1, ページID=1
+2025-02-19 09:24:56,431 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:24:56,432 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes 
+WHERE notes.id = ?
+ LIMIT ? OFFSET ?
+2025-02-19 09:24:56,432 [INFO] sqlalchemy.engine.Engine:1848 - [generated in 0.00015s] (1, 1, 0)
+2025-02-19 09:24:56,438 [INFO] sqlalchemy.engine.Engine:1848 - SELECT pages.id AS pages_id, pages.note_id AS pages_note_id, pages.page_number AS pages_page_number, pages.content AS pages_content, pages.layout_settings AS pages_layout_settings 
+FROM pages 
+WHERE pages.note_id = ? AND pages.page_number = ?
+ LIMIT ? OFFSET ?
+2025-02-19 09:24:56,438 [INFO] sqlalchemy.engine.Engine:1848 - [generated in 0.00021s] (1, 1, 1, 0)
+2025-02-19 09:24:56,438 [INFO] noteapp:378 - ページを取得しました: ID=1
+2025-02-19 09:24:56,438 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:24:56,439 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:24:56] "GET /api/notes/1/pages/1 HTTP/1.1" 200 -
+2025-02-19 09:24:56,447 [INFO] noteapp:351 - ページ取得リクエスト: ノートID=1, ページID=1
+2025-02-19 09:24:56,447 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:24:56,447 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes 
+WHERE notes.id = ?
+ LIMIT ? OFFSET ?
+2025-02-19 09:24:56,447 [INFO] sqlalchemy.engine.Engine:1848 - [cached since 0.01541s ago] (1, 1, 0)
+2025-02-19 09:24:56,448 [INFO] sqlalchemy.engine.Engine:1848 - SELECT pages.id AS pages_id, pages.note_id AS pages_note_id, pages.page_number AS pages_page_number, pages.content AS pages_content, pages.layout_settings AS pages_layout_settings 
+FROM pages 
+WHERE pages.note_id = ? AND pages.page_number = ?
+ LIMIT ? OFFSET ?
+2025-02-19 09:24:56,448 [INFO] sqlalchemy.engine.Engine:1848 - [cached since 0.01029s ago] (1, 1, 1, 0)
+2025-02-19 09:24:56,448 [INFO] noteapp:378 - ページを取得しました: ID=1
+2025-02-19 09:24:56,448 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:24:56,448 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:24:56] "GET /api/notes/1/pages/1 HTTP/1.1" 200 -
+2025-02-19 09:24:59,038 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:24:59,041 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes ORDER BY notes.created_at DESC
+2025-02-19 09:24:59,042 [INFO] sqlalchemy.engine.Engine:1848 - [cached since 5.743s ago] ()
+2025-02-19 09:24:59,050 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:24:59,052 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:24:59] "GET /api/notes HTTP/1.1" 200 -
+2025-02-19 09:24:59,056 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:24:59,057 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes ORDER BY notes.created_at DESC
+2025-02-19 09:24:59,057 [INFO] sqlalchemy.engine.Engine:1848 - [cached since 5.759s ago] ()
+2025-02-19 09:24:59,058 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:24:59,058 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:24:59] "GET /api/notes HTTP/1.1" 200 -
+2025-02-19 09:25:02,516 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:25:02,519 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes ORDER BY notes.created_at DESC
+2025-02-19 09:25:02,520 [INFO] sqlalchemy.engine.Engine:1848 - [cached since 9.221s ago] ()
+2025-02-19 09:25:02,521 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:25:02,522 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:25:02] "GET /api/notes HTTP/1.1" 200 -
+2025-02-19 09:25:02,524 [INFO] sqlalchemy.engine.Engine:2690 - BEGIN (implicit)
+2025-02-19 09:25:02,524 [INFO] sqlalchemy.engine.Engine:1848 - SELECT notes.id AS notes_id, notes.title AS notes_title, notes.main_category AS notes_main_category, notes.sub_category AS notes_sub_category, notes.created_at AS notes_created_at, notes.updated_at AS notes_updated_at 
+FROM notes ORDER BY notes.created_at DESC
+2025-02-19 09:25:02,524 [INFO] sqlalchemy.engine.Engine:1848 - [cached since 9.226s ago] ()
+2025-02-19 09:25:02,525 [INFO] sqlalchemy.engine.Engine:2693 - ROLLBACK
+2025-02-19 09:25:02,527 [INFO] werkzeug:97 - 127.0.0.1 - - [19/Feb/2025 09:25:02] "GET /api/notes HTTP/1.1" 200 -
+2025-02-19 09:25:50,968 [INFO] werkzeug:97 -  * Detected change in '/Users/mishimayu/Desktop/newnote-main/apps/note-backend/app.py', reloading
