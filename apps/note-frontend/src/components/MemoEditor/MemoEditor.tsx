@@ -40,16 +40,20 @@ const MemoEditor = () => {
       }
     };
 
-    const textareaElement = textareaRef.current;
-    if (textareaElement) {
-      textareaElement.addEventListener('mouseup', handleSelectionChange);
-      textareaElement.addEventListener('keyup', handleSelectionChange);
+    // テキストエリアにイベントリスナーを追加
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.addEventListener('mouseup', handleSelectionChange);
+      textarea.addEventListener('keyup', handleSelectionChange);
+      textarea.addEventListener('selectionchange', handleSelectionChange);
     }
 
+    // クリーンアップ関数
     return () => {
-      if (textareaElement) {
-        textareaElement.removeEventListener('mouseup', handleSelectionChange);
-        textareaElement.removeEventListener('keyup', handleSelectionChange);
+      if (textarea) {
+        textarea.removeEventListener('mouseup', handleSelectionChange);
+        textarea.removeEventListener('keyup', handleSelectionChange);
+        textarea.removeEventListener('selectionchange', handleSelectionChange);
       }
     };
   }, []);
@@ -139,10 +143,10 @@ const MemoEditor = () => {
     if (textareaRef.current) {
       const { selectionStart, selectionEnd } = textareaRef.current;
       if (selectionStart !== selectionEnd) {
-        return content.substring(selectionStart, selectionEnd);
+        return textareaRef.current.value.substring(selectionStart, selectionEnd);
       }
     }
-    return content; // 選択がなければ全テキスト
+    return content; // 選択がない場合は全文を返す
   };
 
   const handleTextToSpeech = async () => {
