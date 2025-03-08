@@ -392,16 +392,17 @@ export function NoteEditor() {
   };
   
   // しおりによるページ移動
-  const navigateToBookmark = (bookmark: BookmarkType) => {
+  const navigateToBookmark = async (bookmark: BookmarkType) => {
     if (bookmark.page_number !== currentPage) {
       // 現在のページが変更されている場合は保存
-      saveCurrentPage();
-      
-      // ページを移動
-      setCurrentPage(bookmark.page_number);
+      await saveCurrentPage();
       
       // しおり表示を閉じる（モバイル向け）
       setShowBookmarks(false);
+      
+      // ページを移動して即座にデータを読み込む
+      setCurrentPage(bookmark.page_number);
+      await loadPageData(bookmark.page_number);
     }
   };
   
@@ -612,24 +613,20 @@ export function NoteEditor() {
           <button
             onClick={() => setShowBookmarks(!showBookmarks)}
             className={cn(
-              "p-2 rounded-md transition-colors",
+              "p-2 rounded-md transition-colors flex items-center",
               showBookmarks ? "bg-[#232B3A] text-white" : "text-gray-700 hover:bg-gray-100"
             )}
             aria-label="しおり一覧"
             title="しおり一覧"
           >
-            <Bookmark className="w-4 h-4" />
-            {bookmarks.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                {bookmarks.length}
-              </span>
-            )}
+            <Bookmark className="w-4 h-4 mr-1" />
+            <span className="text-xs">しおり</span>
           </button>
           <button
             onClick={addBookmark}
             disabled={isAddingBookmark || bookmarks.some(b => b.page_number === currentPage)}
             className={cn(
-              "p-2 rounded-md transition-colors",
+              "p-2 rounded-md transition-colors flex items-center",
               bookmarks.some(b => b.page_number === currentPage) 
                 ? "bg-blue-100 text-blue-600" 
                 : isAddingBookmark 
@@ -639,7 +636,8 @@ export function NoteEditor() {
             aria-label="現在のページをしおりに追加"
             title="現在のページをしおりに追加"
           >
-            <BookmarkPlus className="w-4 h-4" />
+            <BookmarkPlus className="w-4 h-4 mr-1" />
+            <span className="text-xs">追加</span>
           </button>
         </div>
       </div>
