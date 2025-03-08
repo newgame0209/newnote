@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '@/utils/utils';
-import { Pen, Eraser, Highlighter, Eye } from 'lucide-react';
+import { Pen, Eraser, Highlighter, Eye, Bookmark, BookmarkPlus, X } from 'lucide-react';
 import { updatePage, getPage, executeOCR, synthesizeSpeech } from '@/api/notes';
+import { fetchBookmarks, createBookmark, deleteBookmark } from '@/api/bookmarks';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useNotes } from '@/contexts/NoteContext';
+import { Bookmark as BookmarkType } from '@/types/note';
 
 // グローバルなfabricの型定義
 declare global {
@@ -42,6 +44,11 @@ export function NoteEditor() {
   const [audioError, setAudioError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+  
+  // しおり機能関連の状態
+  const [bookmarks, setBookmarks] = useState<BookmarkType[]>([]);
+  const [showBookmarks, setShowBookmarks] = useState(false);
+  const [isAddingBookmark, setIsAddingBookmark] = useState(false);
 
   // ページコンテンツを保存する配列
   const pagesRef = useRef<string[]>(Array(totalPages).fill(''));
@@ -334,6 +341,83 @@ export function NoteEditor() {
   };
 
   // ページデータの読み込み
+  // しおり一覧を取得する関数
+  const loadBookmarks = async () => {
+    if (!noteId) return;
+    
+    try {
+      const bookmarkList = await fetchBookmarks(noteId);
+      setBookmarks(bookmarkList);
+    } catch (error) {
+      console.error('しおりの取得に失敗しました:', error);
+    }
+  };
+  
+  // 現在のページにしおりを追加する関数
+  const addBookmark = async () => {
+    if (!noteId) return;
+    
+    try {
+      setIsAddingBookmark(true);
+      await createBookmark(noteId, {
+        page_number: currentPage,
+        title: `ページ ${currentPage}`,
+        is_favorite: false
+      });
+      
+      // しおり一覧を再取得
+      await loadBookmarks();
+      setIsAddingBookmark(false);
+    } catch (error) {
+      console.error('しおりの追加に失敗しました:', error);
+      setIsAddingBookmark(false);
+    }
+  };
+  
+  // しおりを削除する関数
+  const removeBookmark = async (bookmarkId: number, e?: React.MouseEvent) => {
+    if (!noteId) return;
+    
+    if (e) {
+      e.stopPropagation(); // イベントの伝播を止める
+    }
+    
+    try {
+      await deleteBookmark(noteId, bookmarkId);
+      // しおり一覧を再取得
+      await loadBookmarks();
+    } catch (error) {
+      console.error('しおりの削除に失敗しました:', error);
+    }
+  };
+  
+  // しおりによるページ移動
+  const navigateToBookmark = (bookmark: BookmarkType) => {
+    if (bookmark.page_number !== currentPage) {
+      // 現在のページが変更されている場合は保存
+      saveCurrentPage();
+      
+      // ページを移動
+      setCurrentPage(bookmark.page_number);
+      
+      // しおり表示を閉じる（モバイル向け）
+      setShowBookmarks(false);
+    }
+  };
+  
+  // 現在のページを保存する関数
+  const saveCurrentPage = async () => {
+    if (!fabricRef.current || !noteId) return;
+    
+    try {
+      const canvasData = fabricRef.current.toJSON();
+      const content = JSON.stringify(canvasData);
+      await updatePage(noteId, currentPage, content);
+    } catch (error) {
+      console.error('保存エラー:', error);
+    }
+  };
+
   const loadPageData = async (pageNumber: number) => {
     if (!noteId || !fabricRef.current) return;
 
@@ -440,8 +524,19 @@ export function NoteEditor() {
   };
 
   useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
+    // コンポーネントのマウント時にノート情報としおり情報を読み込む
+    const fetchData = async () => {
+      try {
+        if (noteId) {
+          await fetchNotes();
+          await loadBookmarks();
+        }
+      } catch (error) {
+        console.error('読み込みに失敗しました:', error);
+      }
+    };
+    fetchData();
+  }, [noteId, fetchNotes]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -493,24 +588,60 @@ export function NoteEditor() {
       </header>
 
       {/* ツールバー */}
-      <div className="h-12 px-4 flex items-center space-x-4 bg-white border-b">
-        {(['pen', 'eraser', 'marker', 'view'] as const).map((tool) => (
+      <div className="h-12 px-4 flex items-center justify-between bg-white border-b">
+        <div className="flex items-center space-x-4">
+          {(['pen', 'eraser', 'marker', 'view'] as const).map((tool) => (
+            <button
+              key={tool}
+              onClick={() => setCurrentTool(tool)}
+              className={cn(
+                "p-2 rounded-md transition-colors",
+                currentTool === tool
+                  ? "bg-[#232B3A] text-white"
+                  : "text-gray-700 hover:bg-gray-100"
+              )}
+            >
+              {tool === 'pen' && <Pen className="w-4 h-4" />}
+              {tool === 'eraser' && <Eraser className="w-4 h-4" />}
+              {tool === 'marker' && <Highlighter className="w-4 h-4" />}
+              {tool === 'view' && <Eye className="w-4 h-4" />}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center space-x-2">
           <button
-            key={tool}
-            onClick={() => setCurrentTool(tool)}
+            onClick={() => setShowBookmarks(!showBookmarks)}
             className={cn(
               "p-2 rounded-md transition-colors",
-              currentTool === tool
-                ? "bg-[#232B3A] text-white"
-                : "text-gray-700 hover:bg-gray-100"
+              showBookmarks ? "bg-[#232B3A] text-white" : "text-gray-700 hover:bg-gray-100"
             )}
+            aria-label="しおり一覧"
+            title="しおり一覧"
           >
-            {tool === 'pen' && <Pen className="w-4 h-4" />}
-            {tool === 'eraser' && <Eraser className="w-4 h-4" />}
-            {tool === 'marker' && <Highlighter className="w-4 h-4" />}
-            {tool === 'view' && <Eye className="w-4 h-4" />}
+            <Bookmark className="w-4 h-4" />
+            {bookmarks.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                {bookmarks.length}
+              </span>
+            )}
           </button>
-        ))}
+          <button
+            onClick={addBookmark}
+            disabled={isAddingBookmark || bookmarks.some(b => b.page_number === currentPage)}
+            className={cn(
+              "p-2 rounded-md transition-colors",
+              bookmarks.some(b => b.page_number === currentPage) 
+                ? "bg-blue-100 text-blue-600" 
+                : isAddingBookmark 
+                  ? "opacity-50 cursor-not-allowed text-gray-700" 
+                  : "text-gray-700 hover:bg-gray-100"
+            )}
+            aria-label="現在のページをしおりに追加"
+            title="現在のページをしおりに追加"
+          >
+            <BookmarkPlus className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* キャンバス */}
@@ -531,6 +662,61 @@ export function NoteEditor() {
             className="absolute inset-0 w-full h-full"
             style={{ touchAction: 'none' }}
           />
+          
+          {/* しおり一覧サイドパネル（スマホ・タブレット対応） */}
+          {showBookmarks && (
+            <div className="absolute top-0 right-0 h-full w-64 md:w-72 bg-white shadow-lg z-20 overflow-y-auto transition-transform duration-300">
+              <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 className="font-semibold text-lg">しおり一覧</h3>
+                <button 
+                  onClick={() => setShowBookmarks(false)}
+                  className="p-1 rounded-full hover:bg-gray-100"
+                  aria-label="閉じる"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              
+              {bookmarks.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">
+                  しおりはまだありません。<br />
+                  <BookmarkPlus className="inline-block mx-1 mb-0.5" size={16} />ボタンをタップすると、<br />
+                  現在のページをしおりに追加できます。
+                </div>
+              ) : (
+                <ul className="divide-y divide-gray-200">
+                  {bookmarks
+                    .sort((a, b) => a.page_number - b.page_number)
+                    .map((bookmark) => (
+                      <li key={bookmark.id} className="hover:bg-gray-50">
+                        <button
+                          onClick={() => navigateToBookmark(bookmark)}
+                          className={cn(
+                            "w-full text-left p-3 flex justify-between items-center",
+                            bookmark.page_number === currentPage ? 'bg-blue-50' : ''
+                          )}
+                        >
+                          <div className="flex items-center">
+                            <Bookmark size={16} className="mr-2 text-blue-600" />
+                            <span>
+                              {bookmark.title || `ページ ${bookmark.page_number}`}
+                            </span>
+                          </div>
+                          <button
+                            onClick={(e) => removeBookmark(bookmark.id, e)}
+                            className="p-1 rounded-full hover:bg-gray-200 text-gray-500"
+                            aria-label="削除"
+                          >
+                            <X size={14} />
+                          </button>
+                        </button>
+                      </li>
+                    ))
+                  }
+                </ul>
+              )}
+            </div>
+          )}
         </div>
 
         {/* OCRエラー表示 */}

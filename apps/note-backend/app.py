@@ -76,8 +76,9 @@ def create_app():
         })
 
     # APIルートの登録
-    from routes import notes_bp
+    from routes import notes_bp, bookmarks_bp
     app.register_blueprint(notes_bp, url_prefix='/api')
+    app.register_blueprint(bookmarks_bp, url_prefix='/api')
 
     # エラーハンドラー
     @app.errorhandler(Exception)
