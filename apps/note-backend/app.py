@@ -33,18 +33,26 @@ def create_app():
     # デバッグモードを環境変数から設定
     app.debug = os.getenv('APP_DEBUG', 'false').lower() == 'true'
 
-    # CORSの設定
+    # CORSの設定 - より柔軟に対応
     CORS(app, 
          resources={
              r"/api/*": {
                  "origins": ["https://mynote-psi-three.vercel.app", "http://localhost:3000"],
                  "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                 "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+                 "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "*"],
                  "expose_headers": ["Content-Type"],
                  "max_age": 600,
                  "supports_credentials": True
              }
          })
+    
+    # CORS関連のエラーを解決するための追加設定
+    @app.after_request
+    def after_request(response):
+        response.headers.add('Access-Control-Allow-Origin', 'https://mynote-psi-three.vercel.app')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
 
     # ログ設定
     if not os.path.exists('logs'):
