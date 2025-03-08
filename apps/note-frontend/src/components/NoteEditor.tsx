@@ -49,6 +49,7 @@ export function NoteEditor() {
   const [bookmarks, setBookmarks] = useState<BookmarkType[]>([]);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [isAddingBookmark, setIsAddingBookmark] = useState(false);
+  const [bookmarkNotification, setBookmarkNotification] = useState<string | null>(null);
 
   // ページコンテンツを保存する配列
   const pagesRef = useRef<string[]>(Array(totalPages).fill(''));
@@ -367,9 +368,20 @@ export function NoteEditor() {
       
       // しおり一覧を再取得
       await loadBookmarks();
+      
+      // 成功通知を表示
+      setBookmarkNotification(`ページ ${currentPage} にしおりを追加しました`);
+      setTimeout(() => {
+        setBookmarkNotification(null);
+      }, 3000);
+      
       setIsAddingBookmark(false);
     } catch (error) {
       console.error('しおりの追加に失敗しました:', error);
+      setBookmarkNotification('しおりの追加に失敗しました');
+      setTimeout(() => {
+        setBookmarkNotification(null);
+      }, 3000);
       setIsAddingBookmark(false);
     }
   };
@@ -740,6 +752,16 @@ export function NoteEditor() {
             >
               閉じる
             </button>
+          </div>
+        )}
+
+        {/* しおり通知表示 */}
+        {bookmarkNotification && (
+          <div className="fixed top-20 right-6 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse">
+            <p className="flex items-center">
+              <Bookmark className="w-4 h-4 mr-2" />
+              {bookmarkNotification}
+            </p>
           </div>
         )}
 
