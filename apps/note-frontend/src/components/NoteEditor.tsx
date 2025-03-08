@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '@/utils/utils';
-import { Pen, Eraser, Highlighter, Eye, Bookmark, BookmarkPlus, X } from 'lucide-react';
+import { Pen, Eraser, Highlighter, Eye, Bookmark, BookmarkPlus, X, RotateCcw } from 'lucide-react';
 import { updatePage, getPage, executeOCR, synthesizeSpeech } from '@/api/notes';
 import { fetchBookmarks, createBookmark, deleteBookmark } from '@/api/bookmarks';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -53,6 +53,11 @@ export function NoteEditor() {
 
   // ページコンテンツを保存する配列
   const pagesRef = useRef<string[]>(Array(totalPages).fill(''));
+  
+  // キャンバスの操作履歴を管理
+  const [canUndoOperation, setCanUndoOperation] = useState<boolean>(false);
+  const historyRef = useRef<{ [pageNumber: number]: any[] }>({});
+  const currentHistoryIndexRef = useRef<{ [pageNumber: number]: number }>({});
 
   // キャンバスデータが空かどうかを判定する関数
   const isCanvasEmpty = (canvasData: any): boolean => {
@@ -109,6 +114,19 @@ export function NoteEditor() {
       canvas.on('after:render', () => {
         console.log('キャンバス再描画完了');
       });
+      
+      // 操作履歴管理のためのイベントリスナーを追加
+      canvas.on('object:added', () => {
+        saveToHistory(currentPage);
+      });
+      
+      canvas.on('object:modified', () => {
+        saveToHistory(currentPage);
+      });
+      
+      canvas.on('object:removed', () => {
+        saveToHistory(currentPage);
+      });
 
       fabricRef.current = canvas;
       setIsCanvasReady(true);
@@ -129,6 +147,66 @@ export function NoteEditor() {
     };
   }, [noteId]);
 
+  // 操作履歴に現在の状態を保存する関数
+  const saveToHistory = (pageNumber: number) => {
+    if (!fabricRef.current) return;
+    
+    // 現在のキャンバス状態をJSON形式で取得
+    const json = fabricRef.current.toJSON();
+    
+    // このページの履歴配列がなければ初期化
+    if (!historyRef.current[pageNumber]) {
+      historyRef.current[pageNumber] = [];
+      currentHistoryIndexRef.current[pageNumber] = -1;
+    }
+    
+    // 現在の履歴インデックス以降の履歴をすべて削除（新しい分岐を作成）
+    const currentIndex = currentHistoryIndexRef.current[pageNumber];
+    if (currentIndex < historyRef.current[pageNumber].length - 1) {
+      historyRef.current[pageNumber] = historyRef.current[pageNumber].slice(0, currentIndex + 1);
+    }
+    
+    // 履歴に追加
+    historyRef.current[pageNumber].push(json);
+    currentHistoryIndexRef.current[pageNumber] = historyRef.current[pageNumber].length - 1;
+    
+    // Undo操作が可能になったことを通知
+    setCanUndoOperation(true);
+  };
+  
+  // 操作を元に戻す関数
+  const undoOperation = () => {
+    if (!fabricRef.current) return;
+    
+    const pageNumber = currentPage;
+    
+    // このページの履歴がない場合は何もしない
+    if (!historyRef.current[pageNumber] || 
+        currentHistoryIndexRef.current[pageNumber] <= 0) {
+      setCanUndoOperation(false);
+      return;
+    }
+    
+    // 履歴インデックスを1つ戻す
+    currentHistoryIndexRef.current[pageNumber] -= 1;
+    const newIndex = currentHistoryIndexRef.current[pageNumber];
+    
+    // 履歴から状態を復元
+    if (newIndex >= 0) {
+      fabricRef.current.loadFromJSON(historyRef.current[pageNumber][newIndex], () => {
+        fabricRef.current?.renderAll();
+      });
+    } else {
+      // 履歴がない場合はキャンバスをクリア
+      fabricRef.current.clear();
+      fabricRef.current.backgroundColor = '#ffffff';
+      fabricRef.current.renderAll();
+    }
+    
+    // これ以上 Undo できるかどうかを設定
+    setCanUndoOperation(newIndex >= 0);
+  };
+  
   // ページ変更時のみデータを読み込む
   const handlePageChange = (newPage: number) => {
     if (newPage === currentPage) return;
@@ -446,6 +524,13 @@ export function NoteEditor() {
           fabricRef.current.clear();
           fabricRef.current.loadFromJSON(canvasData, () => {
             fabricRef.current!.requestRenderAll();
+            
+            // 履歴を初期化し、現在のキャンバス状態を履歴の最初の状態として保存
+            if (!historyRef.current[pageNumber]) {
+              historyRef.current[pageNumber] = [canvasData];
+              currentHistoryIndexRef.current[pageNumber] = 0;
+              setCanUndoOperation(false); // まだ操作履歴がないのでundoは無効
+            }
           });
 
           // ページ番号インジケータを表示
@@ -460,6 +545,11 @@ export function NoteEditor() {
         }
       } else {
         fabricRef.current.clear();
+        // 空のキャンバス用の履歴初期化
+        historyRef.current[pageNumber] = [];
+        currentHistoryIndexRef.current[pageNumber] = -1;
+        setCanUndoOperation(false);
+        
         // ページ番号インジケータを表示
         setShowPageIndicator(true);
         setTimeout(() => {
@@ -620,6 +710,20 @@ export function NoteEditor() {
               {tool === 'view' && <Eye className="w-4 h-4" />}
             </button>
           ))}
+          <button
+            onClick={undoOperation}
+            disabled={!canUndoOperation}
+            className={cn(
+              "p-2 rounded-md transition-colors",
+              !canUndoOperation
+                ? "text-gray-300 cursor-not-allowed"
+                : "text-gray-700 hover:bg-gray-100"
+            )}
+            aria-label="操作を元に戻す"
+            title="操作を元に戻す"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
         </div>
         <div className="flex items-center space-x-2">
           <button
