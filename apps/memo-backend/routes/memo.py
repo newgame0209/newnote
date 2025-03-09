@@ -191,8 +191,10 @@ def memo_pages(memo_id):
         if page_count >= 10:
             return jsonify({'error': 'ページ数の上限に達しました'}), 400
         
-        # 次のページ番号を取得
+        # 次のページ番号を取得（フロントエンドとの整合性を考慮）
+        # フロントエンドからのページ番号は0ベース、バックエンドでは1ベースで扱う
         next_page_number = page_count + 1
+        print(f"Creating new page with number: {next_page_number} for memo {memo_id}")
         
         memo_page = MemoPage(
             memo_id=memo_id,
@@ -227,12 +229,33 @@ def memo_page(memo_id, page_number):
         memo_id: メモID
         page_number: ページ番号
     """
-    memo = Memo.query.get(memo_id)
-    if not memo:
-        return jsonify({'error': '指定されたメモが存在しません'}), 404
-    
-    # ページ番号でページを取得するように変更
-    memo_page = MemoPage.query.filter_by(page_number=page_number, memo_id=memo_id).first()
+    try:
+        print(f"Received request for memo {memo_id}, page {page_number}")
+        
+        # まずメモの存在確認
+        memo = Memo.query.get(memo_id)
+        if not memo:
+            print(f"Memo {memo_id} not found")
+            return jsonify({'error': '指定されたメモが存在しません'}), 404
+        
+        # このメモの全ページを取得して詳細なデバッグ情報を出力
+        all_pages = MemoPage.query.filter_by(memo_id=memo_id).all()
+        page_numbers = [p.page_number for p in all_pages]
+        print(f"All pages for memo {memo_id}: {page_numbers}")
+        
+        # ページ番号でページを取得
+        memo_page = MemoPage.query.filter_by(page_number=page_number, memo_id=memo_id).first()
+        print(f"Page query result for page {page_number}: {memo_page}")
+        
+        # ページが見つからない場合は、ID検索も試みる（移行期の互換性のため）
+        if not memo_page and page_number > 0:
+            print(f"Trying fallback: looking for page by ID {page_number}")
+            memo_page = MemoPage.query.filter_by(id=page_number, memo_id=memo_id).first()
+            print(f"Fallback query result: {memo_page}")
+    except Exception as e:
+        print(f"Error processing request: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': 'ページの検索中にエラーが発生しました'}), 500
     if not memo_page:
         return jsonify({'error': '指定されたページが存在しません'}), 404
     
