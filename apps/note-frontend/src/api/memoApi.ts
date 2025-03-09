@@ -82,6 +82,23 @@ const memoApi = {
   
   /**
    * @docs
+   * メモの全てのページを取得
+   * @param id メモID
+   */
+  getMemoPages: async (id: number): Promise<MemoPage[]> => {
+    console.log(`Getting all pages for memo ${id}`);
+    try {
+      const response = await axiosInstance.get(`/memo/memos/${id}/pages`);
+      console.log(`Retrieved ${response.data.length} pages for memo ${id}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to get memo pages:`, error);
+      throw error;
+    }
+  },
+  
+  /**
+   * @docs
    * メモの特定ページを取得
    * @param id メモID
    * @param pageNumber ページ番号 (1ベース)

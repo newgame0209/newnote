@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Plus, Moon, Sun, Mic, Save, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { ArrowLeft, Plus, Mic, ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemos } from "@/contexts/MemoContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useParams } from "react-router-dom";
@@ -15,18 +13,17 @@ const MemoEditor = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isDark, setIsDark] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // 保存中の状態管理で使用
   const [selectedTextExists, setSelectedTextExists] = useState(false);
   const [tooltipVisible, setTooltipVisible] = useState(false);
   // ページ関連の状態追加（1ベース）
   const [currentPageIndex, setCurrentPageIndex] = useState(1);
   const [pages, setPages] = useState<MemoPage[]>([]);
   const [totalPages, setTotalPages] = useState(1);
-  const isMobile = useIsMobile();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
-  const { addMemo, getMemo, updateMemo, addMemoPage, updateMemoPage } = useMemos();
+  const { addMemo, getMemo, updateMemo, addMemoPage, updateMemoPage, getMemoPages } = useMemos();
   const { memoId } = useParams();
   const navigate = useNavigate();
   // 設定情報の取得
@@ -68,22 +65,49 @@ const MemoEditor = () => {
     const loadMemoData = async () => {
       if (memoId && memoId !== 'new') {
         try {
+          console.log(`メモ ${memoId} を読み込み中...`);
           const memo = await getMemo(Number(memoId));
+          console.log('取得したメモデータ:', memo);
+          
           if (memo) {
             setTitle(memo.title);
             
-            // ページデータがある場合はページとして表示、ない場合は単一コンテンツとして表示
-            if (memo.pages && memo.pages.length > 0) {
-              setPages(memo.pages);
-              setTotalPages(memo.pages.length);
-              // 最初のページを表示
-              setCurrentPageIndex(0);
-              setContent(memo.pages[0].content || '');
-            } else {
-              // 互換性のため、contentだけある場合は最初のページとして扱う
-              setPages([{ page_number: 0, content: memo.content || '' }]);
+            // ページデータを取得
+            try {
+              // メモの全ページを取得
+              const memoPages = await getMemoPages(Number(memoId));
+              console.log(`メモ ${memoId} のページデータを取得:`, memoPages);
+              
+              if (memoPages && memoPages.length > 0) {
+                setPages(memoPages);
+                setTotalPages(memoPages.length);
+                // 最初のページを表示 (1ベースでページを管理)
+                setCurrentPageIndex(1);
+                setContent(memoPages[0].content || '');
+              } else {
+                // ページがない場合は互換性のためcontentを使用
+                console.log('ページデータがないため、メモのcontentを使用');
+                const firstPage = {
+                  memo_id: Number(memoId),
+                  page_number: 1,
+                  content: memo.content || ''
+                };
+                setPages([firstPage]);
+                setTotalPages(1);
+                setCurrentPageIndex(1);
+                setContent(memo.content || '');
+              }
+            } catch (pageError) {
+              console.error('ページデータの取得に失敗:', pageError);
+              // ページ取得に失敗した場合はcontentを使用
+              const firstPage = {
+                memo_id: Number(memoId),
+                page_number: 1,
+                content: memo.content || ''
+              };
+              setPages([firstPage]);
               setTotalPages(1);
-              setCurrentPageIndex(0);
+              setCurrentPageIndex(1);
               setContent(memo.content || '');
             }
           }
@@ -91,15 +115,15 @@ const MemoEditor = () => {
           console.error('メモの読み込みに失敗しました:', error);
         }
       } else if (memoId === 'new') {
-        // 新規作成の場合は空のページを用意
-        setPages([{ page_number: 0, content: '' }]);
+        // 新規作成の場合は空のページを用意 (1ベースでページを管理)
+        setPages([{ page_number: 1, content: '' }]);
         setTotalPages(1);
-        setCurrentPageIndex(0);
+        setCurrentPageIndex(1);
         setContent('');
       }
     };
     loadMemoData();
-  }, [memoId, getMemo]);
+  }, [memoId, getMemo, getMemoPages]);
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
@@ -127,30 +151,7 @@ const MemoEditor = () => {
     }
   };
 
-  const handleNewNote = () => {
-    setTitle("無題");
-    setContent("");
-  };
-
-  const handleBack = () => {
-    navigate('/');
-  };
-
-  const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    if (newTheme) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
-
-  const handleDone = () => {
-    if (textareaRef.current) {
-      textareaRef.current.blur();
-    }
-  };
+  // 不要な関数を削除
 
   const handleSave = async () => {
     try {
@@ -320,28 +321,47 @@ const MemoEditor = () => {
     try {
       // 現在の編集内容をページに保存
       const updatedPages = [...pages];
-      if (updatedPages[currentPageIndex]) {
-        updatedPages[currentPageIndex].content = content;
+      const currentPageArrayIndex = currentPageIndex - 1; // 1ベースから0ベースのインデックスに変換
+      if (updatedPages[currentPageArrayIndex]) {
+        updatedPages[currentPageArrayIndex].content = content;
       }
-      
-      // 新しいページを追加
-      const newPageNumber = totalPages + 1; // 1ベースのページ番号
-      const newPage = { page_number: newPageNumber, content: '' };
       
       if (memoId && memoId !== 'new') {
         // 既存メモの場合はAPIを呼び出してページを追加
-        await addMemoPage(Number(memoId));
+        console.log(`Adding new page to memo ${memoId}`);
+        const newPageResponse = await addMemoPage(Number(memoId));
+        console.log('API response for new page:', newPageResponse);
+        
+        // APIレスポンスから新しいページの情報を取得
+        const newPageNumber = newPageResponse.page_number;
+        
+        // ローカルステートの更新
+        const newPage = {
+          page_number: newPageNumber,
+          content: newPageResponse.content || ''
+        };
+        
+        updatedPages.push(newPage);
+        setPages(updatedPages);
+        setTotalPages(prev => prev + 1);
+        
+        // 新しいページに切り替え
+        setCurrentPageIndex(newPageNumber);
+        setContent(newPageResponse.content || '');
+      } else {
+        // 新規メモの場合（まだサーバーに保存されていない）
+        const newPageNumber = totalPages + 1; // 1ベースのページ番号
+        const newPage = { page_number: newPageNumber, content: '' };
+        
+        // ローカルステートの更新
+        updatedPages.push(newPage);
+        setPages(updatedPages);
+        setTotalPages(prev => prev + 1);
+        
+        // 新しいページに切り替え
+        setCurrentPageIndex(newPageNumber);
+        setContent('');
       }
-      
-      // ローカルステートの更新
-      updatedPages.push(newPage);
-      setPages(updatedPages);
-      setTotalPages(prev => prev + 1);
-      
-      // 新しいページに切り替え
-      setCurrentPageIndex(newPageNumber);
-      setContent('');
-      
     } catch (error) {
       console.error('ページの追加に失敗しました:', error);
       alert('ページの追加に失敗しました');
@@ -350,11 +370,14 @@ const MemoEditor = () => {
 
   // ページの切り替え
   const handlePageChange = (index: number) => {
-    if (index < 0 || index >= totalPages) return;
+    if (index < 1 || index > totalPages) return;
     
     // 現在のページの内容を保存（1ベース配列のため、インデックスは-1する）
     const updatedPages = [...pages];
     const currentPageArrayIndex = currentPageIndex - 1; // 1ベースから0ベースのインデックスに変換
+    
+    console.log(`切り替え: 現在のページ ${currentPageIndex} (配列インデックス ${currentPageArrayIndex}), 新しいページ ${index}`);
+    
     if (updatedPages[currentPageArrayIndex]) {
       updatedPages[currentPageArrayIndex].content = content;
       
@@ -376,6 +399,7 @@ const MemoEditor = () => {
     // 新しいページに切り替え
     setCurrentPageIndex(index);
     const newPageArrayIndex = index - 1; // 1ベースから0ベースのインデックスに変換
+    console.log(`新しいページのインデックス: ${newPageArrayIndex}, 内容:`, updatedPages[newPageArrayIndex]);
     setContent(updatedPages[newPageArrayIndex]?.content || '');
   };
 
@@ -464,7 +488,7 @@ const MemoEditor = () => {
           
           <button 
             onClick={() => handlePageChange(currentPageIndex + 1)}
-            disabled={currentPageIndex === totalPages - 1}
+            disabled={currentPageIndex >= totalPages}
             className="p-1 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronRight className="h-5 w-5 text-gray-600" />

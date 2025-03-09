@@ -9,7 +9,7 @@ interface MemoContextType {
     content: string;
     mainCategory?: string; 
     subCategory?: string;
-    pages?: MemoPage[]; // ページデータを追加
+    pages?: MemoPage[]; // ページデータを违加
   }) => Promise<Memo>;
   updateMemo: (id: number, data: {
     title?: string;
@@ -22,6 +22,7 @@ interface MemoContextType {
   deleteMemo: (id: number) => Promise<void>;
   fetchMemos: () => Promise<void>;
   // ページ操作用の新しいメソッド
+  getMemoPages: (memoId: number) => Promise<MemoPage[]>; // メモの全ページを取得
   getMemoPage: (memoId: number, pageNumber: number) => Promise<MemoPage>;
   addMemoPage: (memoId: number, content?: string) => Promise<MemoPage>;
   updateMemoPage: (memoId: number, pageNumber: number, content: string) => Promise<MemoPage>;
@@ -106,6 +107,14 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
   }, [fetchMemos]);
 
   // ページ操作のメソッドを追加
+  const getMemoPages = useCallback(async (memoId: number) => {
+    try {
+      return await memoApi.getMemoPages(memoId);
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('メモのページ一覧の取得に失敗しました');
+    }
+  }, []);
+
   const getMemoPage = useCallback(async (memoId: number, pageNumber: number) => {
     try {
       return await memoApi.getMemoPage(memoId, pageNumber);
@@ -166,6 +175,7 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
       loading, 
       error,
       // ページ操作用の新しいメソッドを追加
+      getMemoPages,
       getMemoPage,
       addMemoPage,
       updateMemoPage,
