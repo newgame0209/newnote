@@ -18,8 +18,8 @@ const MemoEditor = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedTextExists, setSelectedTextExists] = useState(false);
   const [tooltipVisible, setTooltipVisible] = useState(false);
-  // ページ関連の状態追加
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  // ページ関連の状態追加（1ベース）
+  const [currentPageIndex, setCurrentPageIndex] = useState(1);
   const [pages, setPages] = useState<MemoPage[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const isMobile = useIsMobile();
@@ -105,10 +105,11 @@ const MemoEditor = () => {
     const newContent = e.target.value;
     setContent(newContent);
     
-    // 現在のページの内容を更新
+    // 現在のページの内容を更新（1ベース配列のため、インデックスは-1する）
     const updatedPages = [...pages];
-    if (updatedPages[currentPageIndex]) {
-      updatedPages[currentPageIndex].content = newContent;
+    const currentPageArrayIndex = currentPageIndex - 1; // 1ベースから0ベースのインデックスに変換
+    if (updatedPages[currentPageArrayIndex]) {
+      updatedPages[currentPageArrayIndex].content = newContent;
       setPages(updatedPages);
       
       // 既存のメモの場合は、APIを使ってページ内容を更新（デバウンス処理を追加するとよいでしょう）
@@ -324,7 +325,7 @@ const MemoEditor = () => {
       }
       
       // 新しいページを追加
-      const newPageNumber = totalPages;
+      const newPageNumber = totalPages + 1; // 1ベースのページ番号
       const newPage = { page_number: newPageNumber, content: '' };
       
       if (memoId && memoId !== 'new') {
@@ -351,10 +352,11 @@ const MemoEditor = () => {
   const handlePageChange = (index: number) => {
     if (index < 0 || index >= totalPages) return;
     
-    // 現在のページの内容を保存
+    // 現在のページの内容を保存（1ベース配列のため、インデックスは-1する）
     const updatedPages = [...pages];
-    if (updatedPages[currentPageIndex]) {
-      updatedPages[currentPageIndex].content = content;
+    const currentPageArrayIndex = currentPageIndex - 1; // 1ベースから0ベースのインデックスに変換
+    if (updatedPages[currentPageArrayIndex]) {
+      updatedPages[currentPageArrayIndex].content = content;
       
       // 既存のメモの場合は、APIを使って現在のページ内容を更新してから切り替え
       if (memoId && memoId !== 'new') {
@@ -373,7 +375,8 @@ const MemoEditor = () => {
     
     // 新しいページに切り替え
     setCurrentPageIndex(index);
-    setContent(updatedPages[index]?.content || '');
+    const newPageArrayIndex = index - 1; // 1ベースから0ベースのインデックスに変換
+    setContent(updatedPages[newPageArrayIndex]?.content || '');
   };
 
   return (
@@ -449,14 +452,14 @@ const MemoEditor = () => {
         <div className="flex items-center space-x-2 mt-2">
           <button 
             onClick={() => handlePageChange(currentPageIndex - 1)}
-            disabled={currentPageIndex === 0}
+            disabled={currentPageIndex === 1}
             className="p-1 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="h-5 w-5 text-gray-600" />
           </button>
           
           <span className="text-sm text-gray-600">
-            {currentPageIndex + 1} / {totalPages}
+            {currentPageIndex} / {totalPages}
           </span>
           
           <button 

@@ -84,11 +84,11 @@ const memoApi = {
    * @docs
    * メモの特定ページを取得
    * @param id メモID
-   * @param pageNumber ページ番号 (0ベース)
+   * @param pageNumber ページ番号 (1ベース)
    */
   getMemoPage: async (id: number, pageNumber: number): Promise<MemoPage> => {
-    // フロントエンドで0ベース、バックエンドで1ベースなので変換
-    const backendPageNumber = pageNumber + 1;
+    // バックエンドと同じページ番号体系（1ベース）を使用
+    const backendPageNumber = pageNumber;
     console.log(`Getting memo page: frontend=${pageNumber}, backend=${backendPageNumber}, memo_id=${id}`);
     try {
       const response = await axiosInstance.get(`/memo/memos/${id}/pages/${backendPageNumber}`);
@@ -122,12 +122,12 @@ const memoApi = {
    * @docs
    * メモの特定ページを更新
    * @param id メモID
-   * @param pageNumber ページ番号 (0ベース)
+   * @param pageNumber ページ番号 (1ベース)
    * @param content 更新内容
    */
   updateMemoPage: async (id: number, pageNumber: number, content: string): Promise<MemoPage> => {
-    // フロントエンドで0ベース、バックエンドで1ベースなので変換
-    const backendPageNumber = pageNumber + 1;
+    // バックエンドと同じページ番号体系（1ベース）を使用
+    const backendPageNumber = pageNumber;
     console.log(`Updating page: frontend=${pageNumber}, backend=${backendPageNumber}, memo_id=${id}, content length=${content.length}`);
     try {
       const response = await axiosInstance.put(`/memo/memos/${id}/pages/${backendPageNumber}`, { content });
@@ -158,11 +158,11 @@ const memoApi = {
    * @docs
    * メモの特定ページを削除
    * @param id メモID
-   * @param pageNumber ページ番号 (0ベース)
+   * @param pageNumber ページ番号 (1ベース)
    */
   deleteMemoPage: async (id: number, pageNumber: number): Promise<void> => {
-    // フロントエンドで0ベース、バックエンドで1ベースなので変換
-    const backendPageNumber = pageNumber + 1;
+    // バックエンドと同じページ番号体系（1ベース）を使用
+    const backendPageNumber = pageNumber;
     console.log(`Deleting page: frontend=${pageNumber}, backend=${backendPageNumber}, memo_id=${id}`);
     try {
       await axiosInstance.delete(`/memo/memos/${id}/pages/${backendPageNumber}`);
