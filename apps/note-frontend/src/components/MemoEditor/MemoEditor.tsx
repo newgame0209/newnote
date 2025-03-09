@@ -322,8 +322,20 @@ const MemoEditor = () => {
       // 現在の編集内容をページに保存
       const updatedPages = [...pages];
       const currentPageArrayIndex = currentPageIndex - 1; // 1ベースから0ベースのインデックスに変換
-      if (updatedPages[currentPageArrayIndex]) {
+      
+      // 現在のページ内容を更新（エラー回避のためのチェック追加）
+      if (currentPageArrayIndex >= 0 && currentPageArrayIndex < updatedPages.length) {
         updatedPages[currentPageArrayIndex].content = content;
+        
+        // 既存のメモの場合は現在のページ内容を保存
+        if (memoId && memoId !== 'new') {
+          try {
+            await updateMemoPage(Number(memoId), currentPageIndex, content);
+            console.log(`ページ ${currentPageIndex} の内容を保存しました`);
+          } catch (error) {
+            console.error('ページ内容の更新に失敗しました:', error);
+          }
+        }
       }
       
       if (memoId && memoId !== 'new') {
@@ -332,31 +344,45 @@ const MemoEditor = () => {
         const newPageResponse = await addMemoPage(Number(memoId));
         console.log('API response for new page:', newPageResponse);
         
-        // APIレスポンスから新しいページの情報を取得
-        const newPageNumber = newPageResponse.page_number;
-        
-        // ローカルステートの更新
-        const newPage = {
-          page_number: newPageNumber,
-          content: newPageResponse.content || ''
-        };
-        
-        updatedPages.push(newPage);
-        setPages(updatedPages);
-        setTotalPages(prev => prev + 1);
-        
-        // 新しいページに切り替え
-        setCurrentPageIndex(newPageNumber);
-        setContent(newPageResponse.content || '');
+        // API レスポンスから新しいページの情報を取得
+        if (newPageResponse && newPageResponse.page_number) {
+          const newPageNumber = newPageResponse.page_number;
+          
+          // ローカルステートの更新
+          const newPage = {
+            memo_id: Number(memoId),
+            page_number: newPageNumber,
+            content: newPageResponse.content || ''
+          };
+          
+          // 配列に追加する前に順序を確認（page_numberでソート）
+          const sortedPages = [...updatedPages, newPage].sort((a, b) => 
+            (a.page_number || 0) - (b.page_number || 0)
+          );
+          
+          // ページデータを更新してから新しいページへの切り替えを行う
+          setPages(sortedPages);
+          setTotalPages(sortedPages.length);
+          
+          // 新しいページに切り替え（非同期操作の後に状態を更新）
+          setCurrentPageIndex(newPageNumber);
+          setContent(newPageResponse.content || '');
+        } else {
+          console.error('新規ページのレスポンスが無効です:', newPageResponse);
+          throw new Error('新規ページの作成に失敗しました');
+        }
       } else {
         // 新規メモの場合（まだサーバーに保存されていない）
         const newPageNumber = totalPages + 1; // 1ベースのページ番号
-        const newPage = { page_number: newPageNumber, content: '' };
+        const newPage = {
+          page_number: newPageNumber,
+          content: ''
+        };
         
-        // ローカルステートの更新
-        updatedPages.push(newPage);
-        setPages(updatedPages);
-        setTotalPages(prev => prev + 1);
+        // ページデータを更新
+        const newPages = [...updatedPages, newPage];
+        setPages(newPages);
+        setTotalPages(newPages.length);
         
         // 新しいページに切り替え
         setCurrentPageIndex(newPageNumber);
@@ -370,37 +396,55 @@ const MemoEditor = () => {
 
   // ページの切り替え
   const handlePageChange = (index: number) => {
-    if (index < 1 || index > totalPages) return;
-    
-    // 現在のページの内容を保存（1ベース配列のため、インデックスは-1する）
-    const updatedPages = [...pages];
-    const currentPageArrayIndex = currentPageIndex - 1; // 1ベースから0ベースのインデックスに変換
-    
-    console.log(`切り替え: 現在のページ ${currentPageIndex} (配列インデックス ${currentPageArrayIndex}), 新しいページ ${index}`);
-    
-    if (updatedPages[currentPageArrayIndex]) {
-      updatedPages[currentPageArrayIndex].content = content;
-      
-      // 既存のメモの場合は、APIを使って現在のページ内容を更新してから切り替え
-      if (memoId && memoId !== 'new') {
-        // 非同期処理だが、ページ切り替えを遅延させないためにawaitしない
-        (async () => {
-          try {
-            await updateMemoPage(Number(memoId), currentPageIndex, content);
-            console.log(`ページ ${currentPageIndex} の内容を保存しました`);
-          } catch (error) {
-            console.error('ページ内容の更新に失敗しました:', error);
-          }
-        })();
-      }
+    if (index < 1 || index > totalPages) {
+      console.log(`無効なページインデックス: ${index}, 有効範囲: 1 ~ ${totalPages}`);
+      return;
     }
-    setPages(updatedPages);
     
-    // 新しいページに切り替え
-    setCurrentPageIndex(index);
-    const newPageArrayIndex = index - 1; // 1ベースから0ベースのインデックスに変換
-    console.log(`新しいページのインデックス: ${newPageArrayIndex}, 内容:`, updatedPages[newPageArrayIndex]);
-    setContent(updatedPages[newPageArrayIndex]?.content || '');
+    try {
+      // 現在のページの内容を保存
+      const updatedPages = [...pages];
+      const currentPageArrayIndex = currentPageIndex - 1; // 1ベースから0ベースのインデックスに変換
+      
+      console.log(`切り替え: 現在のページ ${currentPageIndex} (配列インデックス ${currentPageArrayIndex}), 新しいページ ${index}`);
+      
+      // 現在のページ内容を更新（エラー回避のためのチェック追加）
+      if (currentPageArrayIndex >= 0 && currentPageArrayIndex < updatedPages.length) {
+        updatedPages[currentPageArrayIndex].content = content;
+        
+        // 既存のメモの場合は、APIを使って現在のページ内容を更新してから切り替え
+        if (memoId && memoId !== 'new') {
+          (async () => {
+            try {
+              await updateMemoPage(Number(memoId), currentPageIndex, content);
+              console.log(`ページ ${currentPageIndex} の内容を保存しました`);
+            } catch (error) {
+              console.error('ページ内容の更新に失敗しました:', error);
+            }
+          })();
+        }
+      }
+      
+      // ページデータを更新
+      setPages(updatedPages);
+      
+      // 新しいページに切り替え
+      const newPageArrayIndex = index - 1; // 1ベースから0ベースのインデックスに変換
+      
+      // 新しいページの内容を取得（エラー回避のためのチェック追加）
+      if (newPageArrayIndex >= 0 && newPageArrayIndex < updatedPages.length) {
+        const pageContent = updatedPages[newPageArrayIndex]?.content || '';
+        console.log(`新しいページのインデックス: ${newPageArrayIndex}, 内容:`, updatedPages[newPageArrayIndex]);
+        
+        // ページの切り替えを実行
+        setCurrentPageIndex(index);
+        setContent(pageContent);
+      } else {
+        console.warn(`新しいページインデックス ${newPageArrayIndex} がページ配列の範囲外です`);
+      }
+    } catch (error) {
+      console.error('ページ切り替え時にエラーが発生しました:', error);
+    }
   };
 
   return (
