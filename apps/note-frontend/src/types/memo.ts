@@ -3,8 +3,12 @@
  * メモのページデータ
  */
 export interface MemoPage {
+  id?: number;          // ページID
+  memo_id?: number;     // メモID
   page_number: number;  // ページ番号
   content: string;      // ページの内容
+  created_at?: string;  // 作成日時
+  updated_at?: string;  // 更新日時
 }
 
 /**

@@ -345,28 +345,39 @@ const MemoEditor = () => {
         console.log('API response for new page:', newPageResponse);
         
         // API レスポンスから新しいページの情報を取得
-        if (newPageResponse && newPageResponse.page_number) {
+        if (newPageResponse) {
+          // ページ番号を取得
           const newPageNumber = newPageResponse.page_number;
           
+          if (!newPageNumber) {
+            console.error('ページ番号が見つかりません:', newPageResponse);
+            throw new Error('新規ページの作成に失敗しました');
+          }
+          
           // ローカルステートの更新
-          const newPage = {
+          const newPage: MemoPage = {
             memo_id: Number(memoId),
             page_number: newPageNumber,
-            content: newPageResponse.content || ''
+            content: newPageResponse.content || '',
+            created_at: newPageResponse.created_at,
+            updated_at: newPageResponse.updated_at
           };
           
-          // 配列に追加する前に順序を確認（page_numberでソート）
-          const sortedPages = [...updatedPages, newPage].sort((a, b) => 
-            (a.page_number || 0) - (b.page_number || 0)
-          );
+          // 新しいページを追加
+          const newPages = [...updatedPages, newPage];
           
-          // ページデータを更新してから新しいページへの切り替えを行う
+          // ページ番号でソート
+          const sortedPages = newPages.sort((a, b) => a.page_number - b.page_number);
+          
+          // ページデータを更新
           setPages(sortedPages);
           setTotalPages(sortedPages.length);
           
-          // 新しいページに切り替え（非同期操作の後に状態を更新）
+          // 新しいページに切り替え
           setCurrentPageIndex(newPageNumber);
-          setContent(newPageResponse.content || '');
+          setContent(newPage.content);
+          
+          console.log('新しいページを追加しました:', { newPage, totalPages: sortedPages.length });
         } else {
           console.error('新規ページのレスポンスが無効です:', newPageResponse);
           throw new Error('新規ページの作成に失敗しました');
