@@ -40,8 +40,15 @@ const memoApi = {
       pages: data.pages
     };
     
-    const response = await axiosInstance.post('/memo/memos', requestData);
-    return response.data;
+    console.log(`Creating memo with request data:`, requestData);
+    try {
+      const response = await axiosInstance.post('/memo/memos', requestData);
+      console.log(`Memo created successfully, response:`, response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to create memo:`, error);
+      throw error;
+    }
   },
 
   /**
@@ -82,8 +89,15 @@ const memoApi = {
   getMemoPage: async (id: number, pageNumber: number): Promise<MemoPage> => {
     // フロントエンドで0ベース、バックエンドで1ベースなので変換
     const backendPageNumber = pageNumber + 1;
-    const response = await axiosInstance.get(`/memo/memos/${id}/pages/${backendPageNumber}`);
-    return response.data;
+    console.log(`Getting memo page: frontend=${pageNumber}, backend=${backendPageNumber}, memo_id=${id}`);
+    try {
+      const response = await axiosInstance.get(`/memo/memos/${id}/pages/${backendPageNumber}`);
+      console.log(`Page retrieved successfully:`, response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to get memo page:`, error);
+      throw error;
+    }
   },
 
   /**
@@ -93,8 +107,15 @@ const memoApi = {
    * @param content ページの内容
    */
   addMemoPage: async (id: number, content: string = ''): Promise<MemoPage> => {
-    const response = await axiosInstance.post(`/memo/memos/${id}/pages`, { content });
-    return response.data;
+    console.log(`Adding new page to memo ${id} with content length: ${content.length}`);
+    try {
+      const response = await axiosInstance.post(`/memo/memos/${id}/pages`, { content });
+      console.log(`New page added successfully:`, response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Failed to add new page:`, error);
+      throw error;
+    }
   },
 
   /**
@@ -107,8 +128,30 @@ const memoApi = {
   updateMemoPage: async (id: number, pageNumber: number, content: string): Promise<MemoPage> => {
     // フロントエンドで0ベース、バックエンドで1ベースなので変換
     const backendPageNumber = pageNumber + 1;
-    const response = await axiosInstance.put(`/memo/memos/${id}/pages/${backendPageNumber}`, { content });
-    return response.data;
+    console.log(`Updating page: frontend=${pageNumber}, backend=${backendPageNumber}, memo_id=${id}, content length=${content.length}`);
+    try {
+      const response = await axiosInstance.put(`/memo/memos/${id}/pages/${backendPageNumber}`, { content });
+      console.log(`Page updated successfully:`, response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error(`PUT /memo/memos/${id}/pages/${backendPageNumber}`, error);
+      
+      // ページが見つからない場合は自動的に作成を試みる
+      if (error.response && error.response.status === 404) {
+        console.log(`Page not found, attempting to create it automatically...`);
+        try {
+          // ページが存在しない場合は新規作成を試みる
+          const newPageResponse = await axiosInstance.post(`/memo/memos/${id}/pages`, { content });
+          console.log(`Auto-created missing page:`, newPageResponse.data);
+          return newPageResponse.data;
+        } catch (createError: any) {
+          console.error(`Failed to auto-create page:`, createError);
+          throw createError;
+        }
+      }
+      
+      throw error;
+    }
   },
 
   /**
@@ -120,7 +163,14 @@ const memoApi = {
   deleteMemoPage: async (id: number, pageNumber: number): Promise<void> => {
     // フロントエンドで0ベース、バックエンドで1ベースなので変換
     const backendPageNumber = pageNumber + 1;
-    await axiosInstance.delete(`/memo/memos/${id}/pages/${backendPageNumber}`);
+    console.log(`Deleting page: frontend=${pageNumber}, backend=${backendPageNumber}, memo_id=${id}`);
+    try {
+      await axiosInstance.delete(`/memo/memos/${id}/pages/${backendPageNumber}`);
+      console.log(`Page deleted successfully`);
+    } catch (error: any) {
+      console.error(`Failed to delete page:`, error);
+      throw error;
+    }
   },
 };
 

@@ -40,15 +40,51 @@ def create_memo():
         db_session.add(memo)
         db_session.commit()
         
-        return jsonify({
-            'id': memo.id,
-            'title': memo.title,
-            'content': memo.content,
-            'mainCategory': memo.main_category,
-            'subCategory': memo.sub_category,
-            'createdAt': memo.created_at,
-            'updatedAt': memo.updated_at
-        }), 201
+        # メモ作成時に自動的に最初のページ（ページ番号1）を作成
+        try:
+            first_page = MemoPage(
+                memo_id=memo.id,
+                page_number=1,  # バックエンドでは1ベース
+                content=data.get('content', '')
+            )
+            db_session.add(first_page)
+            db_session.commit()
+            print(f"Initial page created for memo {memo.id}: page_number=1")
+            
+            # ページ情報を含めてレスポンスを返す
+            return jsonify({
+                'id': memo.id,
+                'title': memo.title,
+                'content': memo.content,
+                'mainCategory': memo.main_category,
+                'subCategory': memo.sub_category,
+                'createdAt': memo.created_at,
+                'updatedAt': memo.updated_at,
+                'pages': [{
+                    'id': first_page.id,
+                    'memoId': first_page.memo_id,
+                    'pageNumber': first_page.page_number,
+                    'content': first_page.content,
+                    'createdAt': first_page.created_at,
+                    'updatedAt': first_page.updated_at
+                }]
+            }), 201
+        except SQLAlchemyError as e:
+            # 最初のページ作成に失敗してもメモ自体は作成されているので、エラーログだけ出力する
+            print(f"Warning: Failed to create initial page for memo {memo.id}: {str(e)}")
+            print(traceback.format_exc())
+            
+            # メモ情報のみ返す
+            return jsonify({
+                'id': memo.id,
+                'title': memo.title,
+                'content': memo.content,
+                'mainCategory': memo.main_category,
+                'subCategory': memo.sub_category,
+                'createdAt': memo.created_at,
+                'updatedAt': memo.updated_at,
+                'pages': []
+            }), 201
     except SQLAlchemyError as e:
         db_session.rollback()
         return jsonify({'error': 'データベースエラー'}), 500
