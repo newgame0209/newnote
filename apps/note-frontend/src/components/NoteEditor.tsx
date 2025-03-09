@@ -116,17 +116,33 @@ export function NoteEditor() {
       });
       
       // 操作履歴管理のためのイベントリスナーを追加
-      canvas.on('object:added', () => {
-        saveToHistory(currentPage);
-      });
+      // オブジェクトの追加後に履歴に保存（遅延を少し加えて確実にキャプチャ）
+      canvas.on('object:added', debounce(() => {
+        if (fabricRef.current && fabricRef.current.getObjects().length > 0) {
+          saveToHistory(currentPage);
+        }
+      }, 100));
       
-      canvas.on('object:modified', () => {
+      canvas.on('object:modified', debounce(() => {
         saveToHistory(currentPage);
-      });
+      }, 100));
       
-      canvas.on('object:removed', () => {
+      canvas.on('object:removed', debounce(() => {
         saveToHistory(currentPage);
-      });
+      }, 100));
+      
+      // デバウンス処理のヘルパー関数
+      function debounce(func: Function, wait: number) {
+        let timeout: NodeJS.Timeout;
+        return function executedFunction(...args: any[]) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
 
       fabricRef.current = canvas;
       setIsCanvasReady(true);
@@ -154,14 +170,25 @@ export function NoteEditor() {
     // 現在のキャンバス状態をJSON形式で取得
     const json = fabricRef.current.toJSON();
     
+    // JSON文字列化して比較用に保持
+    const jsonStr = JSON.stringify(json);
+    
     // このページの履歴配列がなければ初期化
     if (!historyRef.current[pageNumber]) {
       historyRef.current[pageNumber] = [];
       currentHistoryIndexRef.current[pageNumber] = -1;
     }
     
-    // 現在の履歴インデックス以降の履歴をすべて削除（新しい分岐を作成）
+    // 直前の状態と同じ場合は追加しない
     const currentIndex = currentHistoryIndexRef.current[pageNumber];
+    if (currentIndex >= 0) {
+      const prevJson = JSON.stringify(historyRef.current[pageNumber][currentIndex]);
+      if (prevJson === jsonStr) {
+        return; // 変更がない場合は追加しない
+      }
+    }
+    
+    // 現在の履歴インデックス以降の履歴をすべて削除（新しい分岐を作成）
     if (currentIndex < historyRef.current[pageNumber].length - 1) {
       historyRef.current[pageNumber] = historyRef.current[pageNumber].slice(0, currentIndex + 1);
     }
@@ -169,6 +196,8 @@ export function NoteEditor() {
     // 履歴に追加
     historyRef.current[pageNumber].push(json);
     currentHistoryIndexRef.current[pageNumber] = historyRef.current[pageNumber].length - 1;
+    
+    console.log(`履歴追加: ページ${pageNumber}, インデックス${currentHistoryIndexRef.current[pageNumber]}, 総数${historyRef.current[pageNumber].length}`);
     
     // Undo操作が可能になったことを通知
     setCanUndoOperation(true);
@@ -191,16 +220,39 @@ export function NoteEditor() {
     currentHistoryIndexRef.current[pageNumber] -= 1;
     const newIndex = currentHistoryIndexRef.current[pageNumber];
     
+    console.log(`Undo: ページ${pageNumber}, 新インデックス${newIndex}, 総数${historyRef.current[pageNumber].length}`);
+    
+    // 全てのイベントリスナーを一時的に無効化する
+    const canvas = fabricRef.current;
+    const originalOnObjectAdded = canvas.__eventListeners['object:added'];
+    const originalOnObjectModified = canvas.__eventListeners['object:modified'];
+    const originalOnObjectRemoved = canvas.__eventListeners['object:removed'];
+    
+    canvas.__eventListeners['object:added'] = [];
+    canvas.__eventListeners['object:modified'] = [];
+    canvas.__eventListeners['object:removed'] = [];
+    
     // 履歴から状態を復元
     if (newIndex >= 0) {
-      fabricRef.current.loadFromJSON(historyRef.current[pageNumber][newIndex], () => {
-        fabricRef.current?.renderAll();
+      canvas.clear();
+      canvas.loadFromJSON(historyRef.current[pageNumber][newIndex], () => {
+        canvas.renderAll();
+        
+        // イベントリスナーを元に戻す
+        canvas.__eventListeners['object:added'] = originalOnObjectAdded;
+        canvas.__eventListeners['object:modified'] = originalOnObjectModified;
+        canvas.__eventListeners['object:removed'] = originalOnObjectRemoved;
       });
     } else {
       // 履歴がない場合はキャンバスをクリア
-      fabricRef.current.clear();
-      fabricRef.current.backgroundColor = '#ffffff';
-      fabricRef.current.renderAll();
+      canvas.clear();
+      canvas.backgroundColor = '#ffffff';
+      canvas.renderAll();
+      
+      // イベントリスナーを元に戻す
+      canvas.__eventListeners['object:added'] = originalOnObjectAdded;
+      canvas.__eventListeners['object:modified'] = originalOnObjectModified;
+      canvas.__eventListeners['object:removed'] = originalOnObjectRemoved;
     }
     
     // これ以上 Undo できるかどうかを設定
