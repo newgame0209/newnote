@@ -54,10 +54,10 @@ export function NoteEditor() {
   // ページコンテンツを保存する配列
   const pagesRef = useRef<string[]>(Array(totalPages).fill(''));
   
-  // キャンバスの操作履歴を管理
+  // キャンバスの操作履歴を管理（新方式）
   const [canUndoOperation, setCanUndoOperation] = useState<boolean>(false);
-  const historyRef = useRef<{ [pageNumber: number]: any[] }>({});
-  const currentHistoryIndexRef = useRef<{ [pageNumber: number]: number }>({});
+  const historyStackRef = useRef<Map<number, Array<string>>>(new Map());
+  const currentPointerRef = useRef<Map<number, number>>(new Map());
 
   // キャンバスデータが空かどうかを判定する関数
   const isCanvasEmpty = (canvasData: any): boolean => {
@@ -115,34 +115,24 @@ export function NoteEditor() {
         console.log('キャンバス再描画完了');
       });
       
-      // 操作履歴管理のためのイベントリスナーを追加
-      // オブジェクトの追加後に履歴に保存（遅延を少し加えて確実にキャプチャ）
-      canvas.on('object:added', debounce(() => {
-        if (fabricRef.current && fabricRef.current.getObjects().length > 0) {
-          saveToHistory(currentPage);
+      // 操作履歴管理のためのイベントリスナーを追加（シンプルな実装）
+      
+      // キャンバス状態変更を検知して履歴に保存する関数
+      const captureCanvasState = () => {
+        if (fabricRef.current && currentPage) {
+          // 少し遅延させてイベントが落ち着いたことを確認
+          setTimeout(() => {
+            if (fabricRef.current) {
+              addToHistory(currentPage);
+            }
+          }, 50);
         }
-      }, 100));
+      };
       
-      canvas.on('object:modified', debounce(() => {
-        saveToHistory(currentPage);
-      }, 100));
-      
-      canvas.on('object:removed', debounce(() => {
-        saveToHistory(currentPage);
-      }, 100));
-      
-      // デバウンス処理のヘルパー関数
-      function debounce(func: Function, wait: number) {
-        let timeout: NodeJS.Timeout;
-        return function executedFunction(...args: any[]) {
-          const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-          };
-          clearTimeout(timeout);
-          timeout = setTimeout(later, wait);
-        };
-      }
+      // 主要な変更イベントで履歴を保存
+      canvas.on('object:added', captureCanvasState);
+      canvas.on('object:modified', captureCanvasState);
+      canvas.on('object:removed', captureCanvasState);
 
       fabricRef.current = canvas;
       setIsCanvasReady(true);
@@ -163,100 +153,88 @@ export function NoteEditor() {
     };
   }, [noteId]);
 
-  // 操作履歴に現在の状態を保存する関数
-  const saveToHistory = (pageNumber: number) => {
+  // 操作履歴に現在の状態を保存する関数（完全に刷新）
+  const addToHistory = (pageNumber: number, isInitialState = false) => {
     if (!fabricRef.current) return;
     
-    // 現在のキャンバス状態をJSON形式で取得
-    const json = fabricRef.current.toJSON();
+    // JSON文字列として現在の状態を取得
+    const jsonData = JSON.stringify(fabricRef.current.toJSON(['version']));
     
-    // JSON文字列化して比較用に保持
-    const jsonStr = JSON.stringify(json);
-    
-    // このページの履歴配列がなければ初期化
-    if (!historyRef.current[pageNumber]) {
-      historyRef.current[pageNumber] = [];
-      currentHistoryIndexRef.current[pageNumber] = -1;
+    // このページの履歴スタックを取得または初期化
+    if (!historyStackRef.current.has(pageNumber)) {
+      historyStackRef.current.set(pageNumber, []);
+      currentPointerRef.current.set(pageNumber, -1);
     }
     
-    // 直前の状態と同じ場合は追加しない
-    const currentIndex = currentHistoryIndexRef.current[pageNumber];
-    if (currentIndex >= 0) {
-      const prevJson = JSON.stringify(historyRef.current[pageNumber][currentIndex]);
-      if (prevJson === jsonStr) {
-        return; // 変更がない場合は追加しない
-      }
+    const stack = historyStackRef.current.get(pageNumber)!;
+    const currentPointer = currentPointerRef.current.get(pageNumber)!;
+    
+    // 初期状態か、同じ状態の連続追加を防止（最後の状態と比較）
+    if (!isInitialState && currentPointer >= 0 && stack[currentPointer] === jsonData) {
+      return; // 変更なしの場合は追加しない
     }
     
-    // 現在の履歴インデックス以降の履歴をすべて削除（新しい分岐を作成）
-    if (currentIndex < historyRef.current[pageNumber].length - 1) {
-      historyRef.current[pageNumber] = historyRef.current[pageNumber].slice(0, currentIndex + 1);
+    // ポインタ以降の履歴を削除（新しい操作分岐）
+    if (currentPointer < stack.length - 1) {
+      stack.splice(currentPointer + 1);
     }
     
-    // 履歴に追加
-    historyRef.current[pageNumber].push(json);
-    currentHistoryIndexRef.current[pageNumber] = historyRef.current[pageNumber].length - 1;
+    // 新しい状態を追加
+    stack.push(jsonData);
+    currentPointerRef.current.set(pageNumber, stack.length - 1);
     
-    console.log(`履歴追加: ページ${pageNumber}, インデックス${currentHistoryIndexRef.current[pageNumber]}, 総数${historyRef.current[pageNumber].length}`);
+    // デバッグ情報
+    console.log(`履歴追加: ページ${pageNumber}, ポインタ=${stack.length - 1}, 履歴数=${stack.length}`);
     
-    // Undo操作が可能になったことを通知
-    setCanUndoOperation(true);
+    // Undo可能状態を更新
+    setCanUndoOperation(stack.length > 1);
   };
   
-  // 操作を元に戻す関数
+  // 操作を元に戻す関数（完全に刷新）
   const undoOperation = () => {
-    if (!fabricRef.current) return;
+    if (!fabricRef.current || !currentPage) return;
     
     const pageNumber = currentPage;
     
-    // このページの履歴がない場合は何もしない
-    if (!historyRef.current[pageNumber] || 
-        currentHistoryIndexRef.current[pageNumber] <= 0) {
+    // このページの履歴スタックを取得
+    if (!historyStackRef.current.has(pageNumber)) {
+      return; // 履歴が存在しない
+    }
+    
+    const stack = historyStackRef.current.get(pageNumber)!;
+    let currentPointer = currentPointerRef.current.get(pageNumber)!;
+    
+    // 最初の状態まで戻った場合はもう戻せない
+    if (currentPointer <= 0) {
       setCanUndoOperation(false);
       return;
     }
     
-    // 履歴インデックスを1つ戻す
-    currentHistoryIndexRef.current[pageNumber] -= 1;
-    const newIndex = currentHistoryIndexRef.current[pageNumber];
+    // ポインタを一つ前に移動
+    currentPointer -= 1;
+    currentPointerRef.current.set(pageNumber, currentPointer);
     
-    console.log(`Undo: ページ${pageNumber}, 新インデックス${newIndex}, 総数${historyRef.current[pageNumber].length}`);
+    console.log(`Undo実行: ページ${pageNumber}, 新ポインタ=${currentPointer}, 履歴数=${stack.length}`);
     
-    // 全てのイベントリスナーを一時的に無効化する
-    const canvas = fabricRef.current;
-    const originalOnObjectAdded = canvas.__eventListeners['object:added'];
-    const originalOnObjectModified = canvas.__eventListeners['object:modified'];
-    const originalOnObjectRemoved = canvas.__eventListeners['object:removed'];
+    // 状態復元を開始
+    console.log(`状態復元開始: ページ${pageNumber}, ポインタ=${currentPointer}`);
     
-    canvas.__eventListeners['object:added'] = [];
-    canvas.__eventListeners['object:modified'] = [];
-    canvas.__eventListeners['object:removed'] = [];
-    
-    // 履歴から状態を復元
-    if (newIndex >= 0) {
-      canvas.clear();
-      canvas.loadFromJSON(historyRef.current[pageNumber][newIndex], () => {
-        canvas.renderAll();
-        
-        // イベントリスナーを元に戻す
-        canvas.__eventListeners['object:added'] = originalOnObjectAdded;
-        canvas.__eventListeners['object:modified'] = originalOnObjectModified;
-        canvas.__eventListeners['object:removed'] = originalOnObjectRemoved;
-      });
-    } else {
-      // 履歴がない場合はキャンバスをクリア
-      canvas.clear();
-      canvas.backgroundColor = '#ffffff';
-      canvas.renderAll();
+    try {
+      // キャンバスを一度クリアして完全にリセット
+      fabricRef.current.clear();
       
-      // イベントリスナーを元に戻す
-      canvas.__eventListeners['object:added'] = originalOnObjectAdded;
-      canvas.__eventListeners['object:modified'] = originalOnObjectModified;
-      canvas.__eventListeners['object:removed'] = originalOnObjectRemoved;
+      // 以前の状態を復元
+      fabricRef.current.loadFromJSON(JSON.parse(stack[currentPointer]), () => {
+        // キャンバスを更新して表示
+        fabricRef.current?.renderAll();
+        console.log(`状態復元完了: ページ${pageNumber}, ポインタ=${currentPointer}`);
+        
+        // これ以上 Undo できるかどうかを設定
+        setCanUndoOperation(currentPointer > 0);
+      });
+    } catch (error) {
+      console.error('キャンバス状態の復元に失敗しました:', error);
     }
-    
-    // これ以上 Undo できるかどうかを設定
-    setCanUndoOperation(newIndex >= 0);
   };
   
   // ページ変更時のみデータを読み込む
@@ -578,11 +556,9 @@ export function NoteEditor() {
             fabricRef.current!.requestRenderAll();
             
             // 履歴を初期化し、現在のキャンバス状態を履歴の最初の状態として保存
-            if (!historyRef.current[pageNumber]) {
-              historyRef.current[pageNumber] = [canvasData];
-              currentHistoryIndexRef.current[pageNumber] = 0;
-              setCanUndoOperation(false); // まだ操作履歴がないのでundoは無効
-            }
+            setTimeout(() => {
+              addToHistory(pageNumber, true); // 初期状態として保存
+            }, 100);
           });
 
           // ページ番号インジケータを表示
@@ -598,8 +574,10 @@ export function NoteEditor() {
       } else {
         fabricRef.current.clear();
         // 空のキャンバス用の履歴初期化
-        historyRef.current[pageNumber] = [];
-        currentHistoryIndexRef.current[pageNumber] = -1;
+        if (historyStackRef.current.has(pageNumber)) {
+          historyStackRef.current.set(pageNumber, []);
+          currentPointerRef.current.set(pageNumber, -1);
+        }
         setCanUndoOperation(false);
         
         // ページ番号インジケータを表示
