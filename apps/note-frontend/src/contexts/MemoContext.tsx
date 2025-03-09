@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import memoApi from '@/api/memoApi';
-import { Memo } from '@/types/memo';
+import { Memo, MemoPage } from '@/types/memo';
 
 interface MemoContextType {
   memos: Memo[];
@@ -8,17 +8,24 @@ interface MemoContextType {
     title: string; 
     content: string;
     mainCategory?: string; 
-    subCategory?: string; 
+    subCategory?: string;
+    pages?: MemoPage[]; // ページデータを追加
   }) => Promise<Memo>;
   updateMemo: (id: number, data: {
     title?: string;
     content?: string;
     mainCategory?: string;
     subCategory?: string;
+    pages?: MemoPage[];
   }) => Promise<Memo>;
   getMemo: (id: number) => Promise<Memo>;
   deleteMemo: (id: number) => Promise<void>;
   fetchMemos: () => Promise<void>;
+  // ページ操作用の新しいメソッド
+  getMemoPage: (memoId: number, pageNumber: number) => Promise<MemoPage>;
+  addMemoPage: (memoId: number, content?: string) => Promise<MemoPage>;
+  updateMemoPage: (memoId: number, pageNumber: number, content: string) => Promise<MemoPage>;
+  deleteMemoPage: (memoId: number, pageNumber: number) => Promise<void>;
   loading: boolean;
   error: Error | null;
 }
@@ -47,7 +54,8 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
     title: string; 
     content: string;
     mainCategory?: string; 
-    subCategory?: string; 
+    subCategory?: string;
+    pages?: MemoPage[]; // ページデータを追加
   }) => {
     try {
       const newMemo = await memoApi.createMemo(data);
@@ -63,6 +71,7 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
     content?: string;
     mainCategory?: string;
     subCategory?: string;
+    pages?: MemoPage[];
   }) => {
     try {
       const updatedMemo = await memoApi.updateMemo(id, data);
@@ -96,6 +105,56 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
     fetchMemos();
   }, [fetchMemos]);
 
+  // ページ操作のメソッドを追加
+  const getMemoPage = useCallback(async (memoId: number, pageNumber: number) => {
+    try {
+      return await memoApi.getMemoPage(memoId, pageNumber);
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('ページの取得に失敗しました');
+    }
+  }, []);
+
+  const addMemoPage = useCallback(async (memoId: number, content: string = '') => {
+    try {
+      const newPage = await memoApi.addMemoPage(memoId, content);
+      // メモの最新情報を取得して更新
+      const updatedMemo = await memoApi.getMemo(memoId);
+      setMemos(prev => prev.map(memo => 
+        memo.id === memoId ? updatedMemo : memo
+      ));
+      return newPage;
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('新規ページの作成に失敗しました');
+    }
+  }, []);
+
+  const updateMemoPage = useCallback(async (memoId: number, pageNumber: number, content: string) => {
+    try {
+      const updatedPage = await memoApi.updateMemoPage(memoId, pageNumber, content);
+      // メモの最新情報を取得して更新
+      const updatedMemo = await memoApi.getMemo(memoId);
+      setMemos(prev => prev.map(memo => 
+        memo.id === memoId ? updatedMemo : memo
+      ));
+      return updatedPage;
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('ページの更新に失敗しました');
+    }
+  }, []);
+
+  const deleteMemoPage = useCallback(async (memoId: number, pageNumber: number) => {
+    try {
+      await memoApi.deleteMemoPage(memoId, pageNumber);
+      // メモの最新情報を取得して更新
+      const updatedMemo = await memoApi.getMemo(memoId);
+      setMemos(prev => prev.map(memo => 
+        memo.id === memoId ? updatedMemo : memo
+      ));
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('ページの削除に失敗しました');
+    }
+  }, []);
+
   return (
     <MemoContext.Provider value={{ 
       memos, 
@@ -105,7 +164,12 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
       deleteMemo, 
       fetchMemos, 
       loading, 
-      error 
+      error,
+      // ページ操作用の新しいメソッドを追加
+      getMemoPage,
+      addMemoPage,
+      updateMemoPage,
+      deleteMemoPage
     }}>
       {children}
     </MemoContext.Provider>
