@@ -128,7 +128,31 @@ const memoApi = {
     try {
       const response = await axiosInstance.post(`/memo/memos/${id}/pages`, { content });
       console.log(`New page added successfully:`, response.data);
-      return response.data;
+      
+      // APIレスポンスの形式を確認し、必要なプロパティを確実に返す
+      if (response.data && typeof response.data === 'object') {
+        // レスポンスデータをログ出力して確認
+        console.log('API response data structure:', response.data);
+        
+        // APIレスポンスのpage_numberプロパティを確認
+        if (!response.data.page_number) {
+          console.error('APIレスポンスにpage_numberが含まれていません:', response.data);
+          throw new Error('Invalid API response: page_number is required');
+        }
+        
+        // レスポンスデータを適切な形式に変換
+        const memoPage: MemoPage = {
+          memo_id: id,
+          page_number: response.data.page_number,
+          content: response.data.content || '',
+          created_at: response.data.created_at,
+          updated_at: response.data.updated_at
+        };
+        
+        return memoPage;
+      } else {
+        throw new Error('Invalid API response format');
+      }
     } catch (error: any) {
       console.error(`Failed to add new page:`, error);
       throw error;
