@@ -115,24 +115,62 @@ export function NoteEditor() {
         console.log('キャンバス再描画完了');
       });
       
-      // 操作履歴管理のためのイベントリスナーを追加（シンプルな実装）
+      // 操作履歴管理のためのイベントリスナーを追加（改善版）
+      // 最後の描画操作からの経過時間を追跡
+      let lastOperationTime = Date.now();
+      // 保存操作がペンディング中かどうか
+      let pendingSave = false;
       
-      // キャンバス状態変更を検知して履歴に保存する関数
+      // キャンバスの状態を保存する関数（タイミング制御あり）
       const captureCanvasState = () => {
-        if (fabricRef.current && currentPage) {
-          // 少し遅延させてイベントが落ち着いたことを確認
-          setTimeout(() => {
-            if (fabricRef.current) {
-              addToHistory(currentPage);
-            }
-          }, 50);
+        if (!fabricRef.current || !currentPage) return;
+
+        // 最後の操作からの経過時間をチェック
+        const now = Date.now();
+        const timeSinceLastOp = now - lastOperationTime;
+        
+        // 操作間の最小間隔（ミリ秒）
+        const minInterval = 200;
+        
+        if (timeSinceLastOp < minInterval) {
+          // 短時間内の連続呼び出しの場合は、最後の呼び出しのみを実行
+          if (!pendingSave) {
+            pendingSave = true;
+            setTimeout(() => {
+              if (fabricRef.current) {
+                console.log('複数操作後の状態を保存します');
+                addToHistory(currentPage);
+                pendingSave = false;
+              }
+            }, minInterval);
+          }
+          return;
         }
+        
+        // 十分な時間が経過している場合は即座に保存
+        console.log('操作完了、状態を保存します');
+        addToHistory(currentPage);
+        lastOperationTime = now;
       };
       
-      // 主要な変更イベントで履歴を保存
-      canvas.on('object:added', captureCanvasState);
-      canvas.on('object:modified', captureCanvasState);
-      canvas.on('object:removed', captureCanvasState);
+      // ペンを上げた時（描画完了時）に状態を保存
+      canvas.on('mouse:up', captureCanvasState);
+      
+      // オブジェクト追加/変更/削除時にも状態を保存
+      canvas.on('object:added', () => {
+        console.log('オブジェクト追加を検知');
+        lastOperationTime = Date.now();
+      });
+      
+      canvas.on('object:modified', () => {
+        console.log('オブジェクト変更を検知');
+        captureCanvasState();
+      });
+      
+      canvas.on('object:removed', () => {
+        console.log('オブジェクト削除を検知');
+        captureCanvasState();
+      });
 
       fabricRef.current = canvas;
       setIsCanvasReady(true);
@@ -171,11 +209,13 @@ export function NoteEditor() {
     
     // 初期状態か、同じ状態の連続追加を防止（最後の状態と比較）
     if (!isInitialState && currentPointer >= 0 && stack[currentPointer] === jsonData) {
+      console.log('変更なし、履歴スキップ');
       return; // 変更なしの場合は追加しない
     }
     
     // ポインタ以降の履歴を削除（新しい操作分岐）
     if (currentPointer < stack.length - 1) {
+      console.log(`ポインタ以降の履歴を削除: ${currentPointer + 1}～${stack.length - 1}`);
       stack.splice(currentPointer + 1);
     }
     
@@ -228,12 +268,16 @@ export function NoteEditor() {
     try {
       // キャンバスを一度クリアして状態を更新
       if (fabricRef.current) {
-        // 現在のキャンバスをクリア
+        // 現在のキャンバスをクリア - 全オブジェクトを削除して新しい状態にする
         fabricRef.current.clear();
         fabricRef.current.backgroundColor = '#ffffff';
         
         // データベース保存をスキップするフラグを設定
         setSkipNextSave(true);
+        
+        // 注意: 以前の状態を復元する前に、キャンバスの内部状態をリセット
+        // これにより、以前の描画状態と現在の描画状態の競合を避ける
+        fabricRef.current._objects = [];
         
         // 以前の状態を復元
         fabricRef.current.loadFromJSON(JSON.parse(stack[currentPointer]), () => {
@@ -252,8 +296,9 @@ export function NoteEditor() {
             }
           }
           
-          // キャンバスを更新して表示
+          // キャンバスを完全に更新して表示
           fabricRef.current.renderAll();
+          fabricRef.current.requestRenderAll();
           console.log(`状態復元完了: ページ${pageNumber}, ポインタ=${currentPointer}`);
           
           // これ以上 Undo できるかどうかを設定
