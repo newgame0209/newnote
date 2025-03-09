@@ -20,9 +20,9 @@ def create_app():
     CORS(app, 
          resources={
              r"/api/*": {
-                 "origins": "*",  # すべてのオリジンを許可
+                 "origins": ["https://mynote-psi-three.vercel.app", "http://localhost:3000"],  # フロントエンドのURLを明示的に許可
                  "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                 "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+                 "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"],
                  "expose_headers": ["Content-Type"],
                  "max_age": 600,
                  "supports_credentials": True
@@ -45,6 +45,21 @@ def create_app():
     @app.route('/health')
     def health_check():
         return {'status': 'ok'}, 200
+
+    # CORSエラー対策のために追加 - プリフライトリクエストの明示的なハンドリング
+    @app.after_request
+    def after_request(response):
+        response.headers.add('Access-Control-Allow-Origin', 'https://mynote-psi-three.vercel.app')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,X-CSRF-Token')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+        
+    # OPTIONSリクエストへの特別な対応
+    @app.route('/api/memo/memos/<int:memo_id>/pages', methods=['OPTIONS'])
+    @app.route('/api/memo/memos/<int:memo_id>/pages/<int:page_id>', methods=['OPTIONS'])
+    def handle_options_requests(memo_id, page_id=None):
+        return {}, 200  # 空のレスポンスを返す
 
     @app.errorhandler(500)
     def handle_500_error(error):
