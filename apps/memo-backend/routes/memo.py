@@ -217,21 +217,22 @@ def memo_pages(memo_id):
         return jsonify({'error': 'ページの作成に失敗しました'}), 500
 
 
-@memo_bp.route('/memos/<int:memo_id>/pages/<int:page_id>', methods=['GET', 'PUT', 'DELETE'])
-def memo_page(memo_id, page_id):
+@memo_bp.route('/memos/<int:memo_id>/pages/<int:page_number>', methods=['GET', 'PUT', 'DELETE'])
+def memo_page(memo_id, page_number):
     """
     @docs
     特定のメモページを操作するAPI
     
     Args:
         memo_id: メモID
-        page_id: ページID
+        page_number: ページ番号
     """
     memo = Memo.query.get(memo_id)
     if not memo:
         return jsonify({'error': '指定されたメモが存在しません'}), 404
     
-    memo_page = MemoPage.query.filter_by(id=page_id, memo_id=memo_id).first()
+    # ページ番号でページを取得するように変更
+    memo_page = MemoPage.query.filter_by(page_number=page_number, memo_id=memo_id).first()
     if not memo_page:
         return jsonify({'error': '指定されたページが存在しません'}), 404
     
