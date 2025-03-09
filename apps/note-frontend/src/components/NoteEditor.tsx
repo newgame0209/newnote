@@ -220,67 +220,36 @@ export function NoteEditor() {
     console.log(`状態復元開始: ページ${pageNumber}, ポインタ=${currentPointer}`);
     
     try {
-      // 完全にキャンバスを初期化（イベントリスナーも含めて）
+      // キャンバスを一度クリアして状態を更新
       if (fabricRef.current) {
-        // まず既存のキャンバスを破棄
-        const oldCanvas = fabricRef.current;
-        const canvasElement = canvasRef.current;
+        // 現在のキャンバスをクリア
+        fabricRef.current.clear();
+        fabricRef.current.backgroundColor = '#ffffff';
         
-        if (canvasElement) {
-          // 一時的に新しいキャンバスを作成し、以前の状態を読み込む
-          const tempCanvas = new window.fabric.Canvas(canvasElement, {
-            isDrawingMode: oldCanvas.isDrawingMode,
-            width: oldCanvas.width,
-            height: oldCanvas.height,
-            preserveObjectStacking: true,
-            backgroundColor: '#ffffff',
-            selection: false,
-            selectable: false,
-          });
-          
-          // 以前の状態を復元
-          tempCanvas.loadFromJSON(JSON.parse(stack[currentPointer]), () => {
-            // 現在のツールに応じてブラシを設定
-            if (tempCanvas.isDrawingMode) {
-              switch (currentTool) {
-                case 'pen':
-                  configurePen(tempCanvas);
-                  break;
-                case 'eraser':
-                  configureEraser(tempCanvas);
-                  break;
-                case 'marker':
-                  configureMarker(tempCanvas);
-                  break;
-              }
+        // 以前の状態を復元
+        fabricRef.current.loadFromJSON(JSON.parse(stack[currentPointer]), () => {
+          // 現在のツールに応じてブラシを設定
+          if (fabricRef.current.isDrawingMode) {
+            switch (currentTool) {
+              case 'pen':
+                configurePen(fabricRef.current);
+                break;
+              case 'eraser':
+                configureEraser(fabricRef.current);
+                break;
+              case 'marker':
+                configureMarker(fabricRef.current);
+                break;
             }
-            
-            // イベントリスナーを再設定
-            const captureCanvasState = () => {
-              if (fabricRef.current && currentPage) {
-                setTimeout(() => {
-                  if (fabricRef.current) {
-                    addToHistory(currentPage);
-                  }
-                }, 50);
-              }
-            };
-            
-            tempCanvas.on('object:added', captureCanvasState);
-            tempCanvas.on('object:modified', captureCanvasState);
-            tempCanvas.on('object:removed', captureCanvasState);
-            
-            // キャンバスを更新して表示
-            tempCanvas.renderAll();
-            console.log(`状態復元完了: ページ${pageNumber}, ポインタ=${currentPointer}`);
-            
-            // 参照を更新
-            fabricRef.current = tempCanvas;
-            
-            // これ以上 Undo できるかどうかを設定
-            setCanUndoOperation(currentPointer > 0);
-          });
-        }
+          }
+          
+          // キャンバスを更新して表示
+          fabricRef.current.renderAll();
+          console.log(`状態復元完了: ページ${pageNumber}, ポインタ=${currentPointer}`);
+          
+          // これ以上 Undo できるかどうかを設定
+          setCanUndoOperation(currentPointer > 0);
+        });
       }
     } catch (error) {
       console.error('キャンバス状態の復元に失敗しました:', error);
