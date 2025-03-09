@@ -188,7 +188,13 @@ export function NoteEditor() {
     
     // Undo可能状態を更新
     setCanUndoOperation(stack.length > 1);
+    
+    // データベースへの保存をスキップするフラグはリセット
+    setSkipNextSave(false);
   };
+  
+  // undo操作後にデータベース保存をスキップするフラグ
+  const [skipNextSave, setSkipNextSave] = useState(false);
   
   // 操作を元に戻す関数（完全に刷新）
   const undoOperation = () => {
@@ -225,6 +231,9 @@ export function NoteEditor() {
         // 現在のキャンバスをクリア
         fabricRef.current.clear();
         fabricRef.current.backgroundColor = '#ffffff';
+        
+        // データベース保存をスキップするフラグを設定
+        setSkipNextSave(true);
         
         // 以前の状態を復元
         fabricRef.current.loadFromJSON(JSON.parse(stack[currentPointer]), () => {
@@ -548,6 +557,12 @@ export function NoteEditor() {
   // 現在のページを保存する関数
   const saveCurrentPage = async () => {
     if (!fabricRef.current || !noteId) return;
+    
+    // undo操作直後の場合は、データベースへの保存をスキップ
+    if (skipNextSave) {
+      console.log('undo操作後のため、データベース保存をスキップします');
+      return;
+    }
     
     try {
       const canvasData = fabricRef.current.toJSON();
