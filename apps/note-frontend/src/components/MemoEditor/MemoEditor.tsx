@@ -346,21 +346,56 @@ const MemoEditor = () => {
         
         // API レスポンスから新しいページの情報を取得
         if (newPageResponse) {
-          // ページ番号を取得
-          const newPageNumber = newPageResponse.page_number;
+          // レスポンスのプロパティ名を確認
+          console.log('レスポンスのプロパティ名確認:', 
+            Object.keys(newPageResponse).join(', '));
+          
+          // キャメルケースかスネークケースか判断
+          const hasSnakeCase = 'page_number' in newPageResponse;
+          const hasCamelCase = 'pageNumber' in newPageResponse;
+          
+          console.log(`プロパティ名形式: スネークケース=${hasSnakeCase}, キャメルケース=${hasCamelCase}`);
+          
+          // ページ番号をプロパティ名形式に応じて取得
+          let newPageNumber: number | undefined;
+          
+          if (hasSnakeCase) {
+            newPageNumber = (newPageResponse as any).page_number;
+          } else if (hasCamelCase) {
+            newPageNumber = (newPageResponse as any).pageNumber;
+          }
           
           if (!newPageNumber) {
             console.error('ページ番号が見つかりません:', newPageResponse);
             throw new Error('新規ページの作成に失敗しました');
           }
           
-          // ローカルステートの更新
+          console.log(`新規ページ情報: ページ番号=${newPageNumber}`);
+          
+          // レスポンスの形式に応じてデータを抽出
+          let content = '';
+          let created_at: string | undefined;
+          let updated_at: string | undefined;
+          
+          if (hasSnakeCase) {
+            content = (newPageResponse as any).content || '';
+            created_at = (newPageResponse as any).created_at;
+            updated_at = (newPageResponse as any).updated_at;
+          } else if (hasCamelCase) {
+            content = (newPageResponse as any).content || '';
+            created_at = (newPageResponse as any).createdAt;
+            updated_at = (newPageResponse as any).updatedAt;
+          }
+          
+          console.log(`抽出したページデータ: content=${content}, created_at=${created_at}, updated_at=${updated_at}`);
+          
+          // MemoPage型に合わせてデータを組み立て
           const newPage: MemoPage = {
             memo_id: Number(memoId),
             page_number: newPageNumber,
-            content: newPageResponse.content || '',
-            created_at: newPageResponse.created_at,
-            updated_at: newPageResponse.updated_at
+            content: content,
+            created_at: created_at,
+            updated_at: updated_at
           };
           
           // 新しいページを追加

@@ -133,20 +133,46 @@ const memoApi = {
       if (response.data && typeof response.data === 'object') {
         // レスポンスデータをログ出力して確認
         console.log('API response data structure:', response.data);
+        console.log('API response properties:', Object.keys(response.data).join(', '));
         
-        // APIレスポンスのpage_numberプロパティを確認
-        if (!response.data.page_number) {
-          console.error('APIレスポンスにpage_numberが含まれていません:', response.data);
-          throw new Error('Invalid API response: page_number is required');
+        // キャメルケースかスネークケースか判断
+        const hasSnakeCase = 'page_number' in response.data;
+        const hasCamelCase = 'pageNumber' in response.data;
+        
+        console.log(`プロパティ名形式: スネークケース=${hasSnakeCase}, キャメルケース=${hasCamelCase}`);
+        
+        // ページ番号をプロパティ名形式に応じて取得
+        let pageNumber: number | undefined;
+        let content = '';
+        let created_at: string | undefined;
+        let updated_at: string | undefined;
+        
+        if (hasSnakeCase) {
+          pageNumber = response.data.page_number;
+          content = response.data.content || '';
+          created_at = response.data.created_at;
+          updated_at = response.data.updated_at;
+        } else if (hasCamelCase) {
+          pageNumber = response.data.pageNumber;
+          content = response.data.content || '';
+          created_at = response.data.createdAt;
+          updated_at = response.data.updatedAt;
         }
         
-        // レスポンスデータを適切な形式に変換
+        if (!pageNumber) {
+          console.error('APIレスポンスにページ番号情報が含まれていません:', response.data);
+          throw new Error('Invalid API response: page number is required');
+        }
+        
+        console.log(`抽出したページ情報: pageNumber=${pageNumber}, content=${content.substring(0, 30)}..., created_at=${created_at}, updated_at=${updated_at}`);
+        
+        // レスポンスデータをMemoPage型に変換
         const memoPage: MemoPage = {
           memo_id: id,
-          page_number: response.data.page_number,
-          content: response.data.content || '',
-          created_at: response.data.created_at,
-          updated_at: response.data.updated_at
+          page_number: pageNumber,
+          content: content,
+          created_at: created_at,
+          updated_at: updated_at
         };
         
         return memoPage;
