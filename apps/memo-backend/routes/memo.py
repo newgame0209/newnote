@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func
 from models.memo import Memo
+from models.memopage import MemoPage
 from database import db_session
 import traceback
 
@@ -146,3 +148,141 @@ def delete_memo(memo_id):
         print(f"Error deleting memo {memo_id}: {str(e)}")
         print(traceback.format_exc())
         return jsonify({'error': '削除に失敗しました'}), 500
+
+
+# メモページ操作用API
+@memo_bp.route('/memos/<int:memo_id>/pages', methods=['GET', 'POST'])
+def memo_pages(memo_id):
+    """
+    @docs
+    メモのページを取得または新規作成するAPI
+    
+    Args:
+        memo_id: メモID
+    """
+    memo = Memo.query.get(memo_id)
+    if not memo:
+        return jsonify({'error': '指定されたメモが存在しません'}), 404
+
+    # GET: メモのすべてのページを取得
+    if request.method == 'GET':
+        try:
+            pages = MemoPage.query.filter_by(memo_id=memo_id).order_by(MemoPage.page_number).all()
+            return jsonify([{
+                'id': page.id,
+                'memoId': page.memo_id,
+                'pageNumber': page.page_number,
+                'content': page.content,
+                'createdAt': page.created_at,
+                'updatedAt': page.updated_at
+            } for page in pages])
+        except SQLAlchemyError as e:
+            db_session.rollback()
+            return jsonify({'error': 'データベースエラー'}), 500
+    
+    # POST: 新しいページを追加
+    try:
+        data = request.get_json()
+        
+        # 既存のページ数をカウント
+        page_count = MemoPage.query.filter_by(memo_id=memo_id).count()
+        
+        # 10ページ以上は作成できない
+        if page_count >= 10:
+            return jsonify({'error': 'ページ数の上限に達しました'}), 400
+        
+        # 次のページ番号を取得
+        next_page_number = page_count + 1
+        
+        memo_page = MemoPage(
+            memo_id=memo_id,
+            page_number=next_page_number,
+            content=data.get('content', '')
+        )
+        
+        db_session.add(memo_page)
+        db_session.commit()
+        
+        return jsonify({
+            'id': memo_page.id,
+            'memoId': memo_page.memo_id,
+            'pageNumber': memo_page.page_number,
+            'content': memo_page.content,
+            'createdAt': memo_page.created_at,
+            'updatedAt': memo_page.updated_at
+        }), 201
+    except SQLAlchemyError as e:
+        db_session.rollback()
+        traceback.print_exc()
+        return jsonify({'error': 'ページの作成に失敗しました'}), 500
+
+
+@memo_bp.route('/memos/<int:memo_id>/pages/<int:page_id>', methods=['GET', 'PUT', 'DELETE'])
+def memo_page(memo_id, page_id):
+    """
+    @docs
+    特定のメモページを操作するAPI
+    
+    Args:
+        memo_id: メモID
+        page_id: ページID
+    """
+    memo = Memo.query.get(memo_id)
+    if not memo:
+        return jsonify({'error': '指定されたメモが存在しません'}), 404
+    
+    memo_page = MemoPage.query.filter_by(id=page_id, memo_id=memo_id).first()
+    if not memo_page:
+        return jsonify({'error': '指定されたページが存在しません'}), 404
+    
+    # GET: 特定のページを取得
+    if request.method == 'GET':
+        return jsonify({
+            'id': memo_page.id,
+            'memoId': memo_page.memo_id,
+            'pageNumber': memo_page.page_number,
+            'content': memo_page.content,
+            'createdAt': memo_page.created_at,
+            'updatedAt': memo_page.updated_at
+        })
+    
+    # PUT: ページを更新
+    if request.method == 'PUT':
+        try:
+            data = request.get_json()
+            
+            memo_page.content = data.get('content', memo_page.content)
+            db_session.commit()
+            
+            return jsonify({
+                'id': memo_page.id,
+                'memoId': memo_page.memo_id,
+                'pageNumber': memo_page.page_number,
+                'content': memo_page.content,
+                'createdAt': memo_page.created_at,
+                'updatedAt': memo_page.updated_at
+            })
+        except SQLAlchemyError as e:
+            db_session.rollback()
+            return jsonify({'error': 'ページの更新に失敗しました'}), 500
+    
+    # DELETE: ページを削除
+    if request.method == 'DELETE':
+        try:
+            # このページより後のページの番号を一つづつ減らす
+            later_pages = MemoPage.query.filter(
+                MemoPage.memo_id == memo_id,
+                MemoPage.page_number > memo_page.page_number
+            ).order_by(MemoPage.page_number).all()
+            
+            for later_page in later_pages:
+                later_page.page_number -= 1
+            
+            # 指定されたページを削除
+            db_session.delete(memo_page)
+            db_session.commit()
+            
+            return jsonify({'message': 'ページが削除されました'})
+        except SQLAlchemyError as e:
+            db_session.rollback()
+            return jsonify({'error': 'ページの削除に失敗しました'}), 500
