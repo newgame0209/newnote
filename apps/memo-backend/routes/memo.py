@@ -1,21 +1,33 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.memo import Memo
 from models.memopage import MemoPage
+from models.user import User
 from database import db_session
 import traceback
 
 memo_bp = Blueprint('memo', __name__)
 
 @memo_bp.route('/memos', methods=['GET', 'POST', 'OPTIONS'])
+@jwt_required(optional=True)  # オプショナル認証（認証なしでも動作可能）
 def create_memo():
     if request.method == 'OPTIONS':
         return '', 204
     
+    # JWT認証からユーザーIDを取得（認証されていない場合はNone）
+    user_id = get_jwt_identity()
+    
     if request.method == 'GET':
         try:
-            memos = Memo.query.order_by(Memo.created_at.desc()).all()
+            # ユーザーIDが指定されている場合はそのユーザーのメモのみ取得
+            # 認証されていない場合は、user_idがNullのメモのみ取得（既存データ対応）
+            if user_id:
+                memos = Memo.query.filter_by(user_id=user_id).order_by(Memo.created_at.desc()).all()
+            else:
+                memos = Memo.query.filter_by(user_id=None).order_by(Memo.created_at.desc()).all()
+                
             return jsonify([{
                 'id': memo.id,
                 'title': memo.title,
@@ -23,15 +35,18 @@ def create_memo():
                 'mainCategory': memo.main_category,
                 'subCategory': memo.sub_category,
                 'createdAt': memo.created_at,
-                'updatedAt': memo.updated_at
+                'updatedAt': memo.updated_at,
+                'userId': memo.user_id
             } for memo in memos])
         except SQLAlchemyError as e:
             db_session.rollback()
+            print(f"メモ一覧取得エラー: {str(e)}")
             return jsonify({'error': 'データベースエラー'}), 500
     
     try:
         data = request.get_json()
         memo = Memo(
+            user_id=user_id,  # ユーザーIDを設定（未認証の場合はNone）
             title=data.get('title', '無題'),
             content=data.get('content', ''),
             main_category=data.get('main_category'),
@@ -60,6 +75,7 @@ def create_memo():
                 'subCategory': memo.sub_category,
                 'createdAt': memo.created_at,
                 'updatedAt': memo.updated_at,
+                'userId': memo.user_id,
                 'pages': [{
                     'id': first_page.id,
                     'memoId': first_page.memo_id,
@@ -83,6 +99,7 @@ def create_memo():
                 'subCategory': memo.sub_category,
                 'createdAt': memo.created_at,
                 'updatedAt': memo.updated_at,
+                'userId': memo.user_id,
                 'pages': []
             }), 201
     except SQLAlchemyError as e:
@@ -90,11 +107,21 @@ def create_memo():
         return jsonify({'error': 'データベースエラー'}), 500
 
 @memo_bp.route('/memos/list', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)  # オプショナル認証
 def get_memos():
     if request.method == 'OPTIONS':
         return '', 204
+    
+    # JWT認証からユーザーIDを取得
+    user_id = get_jwt_identity()
+    
     try:
-        memos = Memo.query.all()
+        # ユーザーIDが指定されている場合はそのユーザーのメモのみ取得
+        # 認証されていない場合は、user_idがNullのメモのみ取得（既存データ対応）
+        if user_id:
+            memos = Memo.query.filter_by(user_id=user_id).all()
+        else:
+            memos = Memo.query.filter_by(user_id=None).all()
         return jsonify([{
             'id': memo.id,
             'title': memo.title,
@@ -110,13 +137,25 @@ def get_memos():
         return jsonify({'error': '取得に失敗しました'}), 500
 
 @memo_bp.route('/memos/<int:memo_id>', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)  # オプショナル認証
 def get_memo(memo_id):
     if request.method == 'OPTIONS':
         return '', 204
+        
+    # JWT認証からユーザーIDを取得
+    user_id = get_jwt_identity()
+    
     try:
         memo = Memo.query.get(memo_id)
         if not memo:
             return jsonify({'error': 'メモが見つかりません'}), 404
+            
+        # ユーザーIDが指定されている場合、そのユーザーのメモかチェック
+        if user_id and memo.user_id and memo.user_id != user_id:
+            return jsonify({'error': 'このメモにアクセスする権限がありません'}), 403
+        # 認証されていない場合、user_idがNullのメモのみアクセス可能
+        elif not user_id and memo.user_id is not None:
+            return jsonify({'error': 'このメモにアクセスする権限がありません'}), 403
 
         return jsonify({
             'id': memo.id,
@@ -133,13 +172,25 @@ def get_memo(memo_id):
         return jsonify({'error': '取得に失敗しました'}), 500
 
 @memo_bp.route('/memos/<int:memo_id>', methods=['PUT', 'OPTIONS'])
+@jwt_required(optional=True)  # オプショナル認証
 def update_memo(memo_id):
     if request.method == 'OPTIONS':
         return '', 204
+        
+    # JWT認証からユーザーIDを取得
+    user_id = get_jwt_identity()
+    
     try:
         memo = Memo.query.get(memo_id)
         if not memo:
             return jsonify({'error': 'メモが見つかりません'}), 404
+            
+        # ユーザーIDが指定されている場合、そのユーザーのメモかチェック
+        if user_id and memo.user_id and memo.user_id != user_id:
+            return jsonify({'error': 'このメモを編集する権限がありません'}), 403
+        # 認証されていない場合、user_idがNullのメモのみアクセス可能
+        elif not user_id and memo.user_id is not None:
+            return jsonify({'error': 'このメモを編集する権限がありません'}), 403
 
         data = request.get_json()
         if 'title' in data:
@@ -168,13 +219,25 @@ def update_memo(memo_id):
         return jsonify({'error': '更新に失敗しました'}), 500
 
 @memo_bp.route('/memos/<int:memo_id>', methods=['DELETE', 'OPTIONS'])
+@jwt_required(optional=True)  # オプショナル認証
 def delete_memo(memo_id):
     if request.method == 'OPTIONS':
         return '', 204
+        
+    # JWT認証からユーザーIDを取得
+    user_id = get_jwt_identity()
+    
     try:
         memo = Memo.query.get(memo_id)
         if not memo:
             return jsonify({'error': 'メモが見つかりません'}), 404
+            
+        # ユーザーIDが指定されている場合、そのユーザーのメモかチェック
+        if user_id and memo.user_id and memo.user_id != user_id:
+            return jsonify({'error': 'このメモを削除する権限がありません'}), 403
+        # 認証されていない場合、user_idがNullのメモのみアクセス可能
+        elif not user_id and memo.user_id is not None:
+            return jsonify({'error': 'このメモを削除する権限がありません'}), 403
 
         db_session.delete(memo)
         db_session.commit()
@@ -188,6 +251,7 @@ def delete_memo(memo_id):
 
 # メモページ操作用API
 @memo_bp.route('/memos/<int:memo_id>/pages', methods=['GET', 'POST'])
+@jwt_required(optional=True)  # オプショナル認証
 def memo_pages(memo_id):
     """
     @docs
@@ -196,9 +260,19 @@ def memo_pages(memo_id):
     Args:
         memo_id: メモID
     """
+    # JWT認証からユーザーIDを取得
+    user_id = get_jwt_identity()
+    
     memo = Memo.query.get(memo_id)
     if not memo:
         return jsonify({'error': '指定されたメモが存在しません'}), 404
+        
+    # ユーザーIDが指定されている場合、そのユーザーのメモかチェック
+    if user_id and memo.user_id and memo.user_id != user_id:
+        return jsonify({'error': 'このメモにアクセスする権限がありません'}), 403
+    # 認証されていない場合、user_idがNullのメモのみアクセス可能
+    elif not user_id and memo.user_id is not None:
+        return jsonify({'error': 'このメモにアクセスする権限がありません'}), 403
 
     # GET: メモのすべてのページを取得
     if request.method == 'GET':
