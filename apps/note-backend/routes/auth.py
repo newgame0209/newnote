@@ -220,9 +220,14 @@ def google_auth_callback():
         
         code = data['code']
         
-        # Googleクライアント設定
-        client_id = "996683698857-ntesivverlnv2vrvqse18vra7lcq35nt.apps.googleusercontent.com"
-        client_secret = "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"
+        # Googleクライアント設定（環境変数から取得）
+        client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
+        client_secret = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+        
+        # クライアントIDとシークレットが設定されていることを確認
+        if not client_id or not client_secret:
+            logging.error("Google OAuth認証情報が設定されていません")
+            return jsonify({"message": "サーバー設定エラー"}), 500
         
         # リダイレクトURI（環境に応じて変更）
         # 開発環境か本番環境かに基づいて選択
