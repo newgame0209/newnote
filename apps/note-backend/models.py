@@ -2,8 +2,47 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
+import bcrypt
+from werkzeug.security import generate_password_hash, check_password_hash
 
 Base = declarative_base()
+
+class User(Base):
+    """
+    @docs
+    ユーザー情報を管理するテーブル
+
+    Attributes:
+        id (int): プライマリーキー
+        email (str): ユーザーのメールアドレス（一意）
+        password_hash (str): ハッシュ化されたパスワード
+        nickname (str): ユーザーのニックネーム
+        google_id (str): Google認証用ID（オプション）
+        is_active (bool): アカウントが有効かどうか
+        created_at (datetime): 作成日時
+        notes (relationship): ノートとの1対多のリレーション
+        bookmarks (relationship): ブックマークとの1対多のリレーション
+    """
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(120), unique=True, nullable=False)
+    password_hash = Column(String(128))
+    nickname = Column(String(50), nullable=False)
+    google_id = Column(String(100), unique=True, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # リレーションシップ
+    notes = relationship("Note", back_populates="user")
+    
+    def set_password(self, password):
+        """パスワードをハッシュ化して保存する"""
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        """パスワードが正しいかチェックする"""
+        return check_password_hash(self.password_hash, password)
 
 class Note(Base):
     """
@@ -12,23 +51,29 @@ class Note(Base):
 
     Attributes:
         id (int): プライマリーキー
+        user_id (int): 所有ユーザーのID（外部キー）
         title (str): ノートのタイトル
         main_category (str): メインカテゴリ
         sub_category (str): サブカテゴリ
         created_at (datetime): 作成日時
         updated_at (datetime): 更新日時
+        user (relationship): ユーザーとの多対1のリレーション
         pages (relationship): ページとの1対多のリレーション
         bookmarks (relationship): ブックマークとの1対多のリレーション
     """
     __tablename__ = 'notes'
 
     id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)  # 既存データのため一時的にnullable=True
     title = Column(String(100), nullable=False)
     main_category = Column(String(50), nullable=False)
     sub_category = Column(String(50), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # ユーザーテーブルとの多対1のリレーション
+    user = relationship("User", back_populates="notes")
+    
     # Pageテーブルとの1対多のリレーション
     pages = relationship("Page", back_populates="note", cascade="all, delete-orphan")
     

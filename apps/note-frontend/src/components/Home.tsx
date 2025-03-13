@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Grid, List, Calendar, Filter, Settings, Trash2, Plus, FileText } from 'lucide-react';
+import { Grid, List, Calendar, Filter, Settings, Trash2, Plus, FileText, LogOut, User } from 'lucide-react';
 import { AnimatedText } from "@/components/ui/animated-text";
 import { NewNoteModal } from "@/components/NewNoteModal";
 import MemoModal from "@/components/MemoModal";
@@ -8,11 +8,20 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { useNavigate } from "react-router-dom";
 import { useNotes } from "@/contexts/NoteContext";
 import { useMemos } from "@/contexts/MemoContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Note, CreateNoteData } from "@/types/note";
 import { Memo, CreateMemoData } from "@/types/memo";
 import { getDisplayCategory } from '@/types/categories';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Note {
   id: string;
@@ -47,6 +56,7 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const { notes, addNote, deleteNote, fetchNotes, loading: noteLoading, error: noteError } = useNotes();
   const { memos, addMemo, deleteMemo, fetchMemos, loading: memoLoading, error: memoError } = useMemos();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleAddNote = useCallback(async (noteData: CreateNoteData) => {
@@ -254,12 +264,45 @@ export default function Home() {
               delay={0.1}
             />
           </h1>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="rounded-md bg-transparent px-3 sm:px-4 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors"
-          >
-            <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
+          <div className="flex items-center space-x-3">
+            {user && (
+              <div className="hidden sm:flex items-center mr-2">
+                <span className="text-white text-sm">{user.nickname || user.email}</span>
+              </div>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="rounded-md bg-transparent px-3 sm:px-4 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors"
+                >
+                  <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {user && (
+                  <>
+                    <DropdownMenuLabel>
+                      <div className="flex items-center space-x-2">
+                        <User className="w-4 h-4" />
+                        <span>{user.nickname || user.email}</span>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  <span>設定</span>
+                </DropdownMenuItem>
+                {user && (
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    <span>ログアウト</span>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
 

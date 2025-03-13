@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from logger import logger
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 class NoteError(Exception):
     """ノート操作に関するカスタム例外クラス"""
@@ -26,6 +27,7 @@ def handle_db_error(error):
     return jsonify({'error': 'データベース操作中にエラーが発生しました'}), 500
 
 @notes_bp.route('/notes', methods=['POST'])
+@jwt_required()
 def create_note():
     """ノートを新規作成するエンドポイント"""
     try:
@@ -37,12 +39,16 @@ def create_note():
             logger.warning("タイトルが指定されていません")
             raise NoteError('タイトルは必須です')
         
+        # 現在の認証済みユーザーのIDを取得
+        current_user_id = get_jwt_identity()
+        
         db = Session()
         try:
             note = Note(
                 title=data['title'],
                 main_category=data.get('main_category', 'その他'),
-                sub_category=data.get('sub_category', '')
+                sub_category=data.get('sub_category', ''),
+                user_id=current_user_id  # ユーザーIDを設定
             )
             db.add(note)
             db.commit()
@@ -71,34 +77,51 @@ def create_note():
         raise
 
 @notes_bp.route('/notes', methods=['GET'])
+@jwt_required()
 def get_notes():
     """ノート一覧を取得するエンドポイント"""
     try:
-        with Session() as session:
-            notes = session.query(Note).order_by(Note.created_at.desc()).all()
-            return jsonify([{
+        # 現在の認証済みユーザーのIDを取得
+        current_user_id = get_jwt_identity()
+        
+        db = Session()
+        notes = db.query(Note).filter(Note.user_id == current_user_id).all()
+        
+        result = []
+        for note in notes:
+            result.append({
                 'id': note.id,
                 'title': note.title,
                 'main_category': note.main_category,
                 'sub_category': note.sub_category,
                 'created_at': note.created_at.isoformat(),
                 'updated_at': note.updated_at.isoformat()
-            } for note in notes])
+            })
+        return jsonify(result)
     except SQLAlchemyError as e:
         logger.error(f"Failed to fetch notes: {e}")
         raise
 
 @notes_bp.route('/notes/<int:note_id>', methods=['GET'])
+@jwt_required()
 def get_note(note_id):
     """指定されたIDのノートを取得するエンドポイント"""
     logger.info(f"ノート取得リクエスト: ID={note_id}")
+    # 現在の認証済みユーザーのIDを取得
+    current_user_id = get_jwt_identity()
+    
     db = Session()
     try:
-        note = db.query(Note).options(joinedload(Note.pages)).filter(Note.id == note_id).first()
+        note = db.query(Note).filter(Note.id == note_id).options(joinedload(Note.pages)).first()
         
         if not note:
             logger.warning(f"ノートが見つかりません: ID={note_id}")
             raise NoteError('指定されたノートが見つかりません', 404)
+        
+        # 権限チェック: 自分のノートでなければアクセス不可
+        if note.user_id != current_user_id:
+            logger.warning(f"ノートへのアクセス権限がありません: ID={note_id}")
+            raise NoteError('このノートへのアクセス権限がありません', 403)
             
         logger.info(f"ノートを取得しました: ID={note_id}")
         return jsonify({
@@ -128,155 +151,172 @@ def get_note(note_id):
         db.close()
 
 @notes_bp.route('/notes/<int:note_id>', methods=['PUT'])
+@jwt_required()
 def update_note(note_id):
     """指定されたIDのノートを更新するエンドポイント"""
     try:
-        logger.info(f"ノート更新リクエスト: ID={note_id}")
-        data = request.get_json()
+        # 現在の認証済みユーザーのIDを取得
+        current_user_id = get_jwt_identity()
         
+        data = request.get_json()
         if not data:
-            logger.warning("データが必要です")
-            raise NoteError('データが必要です')
-            
+            raise NoteError('更新データが指定されていません')
+        
         db = Session()
-        try:
-            note = db.query(Note).filter(Note.id == note_id).first()
+        note = db.query(Note).filter(Note.id == note_id).first()
+        
+        if not note:
+            logger.warning(f"更新対象のノートが見つかりません: ID={note_id}")
+            raise NoteError('指定されたノートが見つかりません', 404)
+        
+        # 権限チェック: 自分のノートでなければ更新不可
+        if note.user_id != current_user_id:
+            logger.warning(f"ノートの更新権限がありません: ID={note_id}")
+            raise NoteError('このノートの更新権限がありません', 403)
             
-            if not note:
-                logger.warning(f"ノートが見つかりません: ID={note_id}")
-                raise NoteError('指定されたノートが見つかりません', 404)
-                
-            if 'title' in data:
-                note.title = data['title']
-            if 'main_category' in data:
-                note.main_category = data['main_category']
-            if 'sub_category' in data:
-                note.sub_category = data['sub_category']
-            if 'paper_size' in data:
-                note.paper_size = data['paper_size']
-            if 'orientation' in data:
-                note.orientation = data['orientation']
-            if 'color' in data:
-                note.color = data['color']
-            if 'last_edited_page' in data:
-                note.last_edited_page = data['last_edited_page']
-                
-            note.updated_at = datetime.utcnow()
-            db.commit()
+        if 'title' in data:
+            note.title = data['title']
+        if 'main_category' in data:
+            note.main_category = data['main_category']
+        if 'sub_category' in data:
+            note.sub_category = data['sub_category']
+        if 'paper_size' in data:
+            note.paper_size = data['paper_size']
+        if 'orientation' in data:
+            note.orientation = data['orientation']
+        if 'color' in data:
+            note.color = data['color']
+        if 'last_edited_page' in data:
+            note.last_edited_page = data['last_edited_page']
             
-            logger.info(f"ノートを更新しました: ID={note_id}")
-            return jsonify({
-                'id': note.id,
-                'title': note.title,
-                'main_category': note.main_category,
-                'sub_category': note.sub_category,
-                'paper_size': note.paper_size,
-                'orientation': note.orientation,
-                'color': note.color,
-                'last_edited_page': note.last_edited_page,
-                'created_at': note.created_at.isoformat(),
-                'updated_at': note.updated_at.isoformat()
-            })
-            
-        except SQLAlchemyError as e:
-            db.rollback()
-            logger.error(f"データベースエラー: {str(e)}")
-            raise
-        finally:
-            db.close()
-            
+        note.updated_at = datetime.utcnow()
+        db.commit()
+        
+        logger.info(f"ノートを更新しました: ID={note_id}")
+        return jsonify({
+            'id': note.id,
+            'title': note.title,
+            'main_category': note.main_category,
+            'sub_category': note.sub_category,
+            'paper_size': note.paper_size,
+            'orientation': note.orientation,
+            'color': note.color,
+            'last_edited_page': note.last_edited_page,
+            'created_at': note.created_at.isoformat(),
+            'updated_at': note.updated_at.isoformat()
+        })
+        
+    except NoteError as e:
+        logger.warning(f"ノート更新エラー: {str(e)}")
+        return jsonify({'error': str(e)}), e.status_code
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"データベースエラー: {str(e)}")
+        return jsonify({'error': 'データベース操作中にエラーが発生しました'}), 500
     except Exception as e:
         logger.error(f"予期せぬエラー: {str(e)}")
-        if not isinstance(e, (NoteError, SQLAlchemyError)):
-            return jsonify({'error': 'サーバーエラーが発生しました'}), 500
-        raise
+        return jsonify({'error': 'サーバーエラーが発生しました'}), 500
+    finally:
+        db.close()
 
 @notes_bp.route('/notes/<int:note_id>', methods=['DELETE'])
+@jwt_required()
 def delete_note(note_id):
     """指定されたIDのノートを削除するエンドポイント"""
     try:
-        logger.info(f"ノート削除リクエスト: ID={note_id}")
+        # 現在の認証済みユーザーのIDを取得
+        current_user_id = get_jwt_identity()
+        
         db = Session()
-        try:
-            note = db.query(Note).filter(Note.id == note_id).first()
+        note = db.query(Note).filter(Note.id == note_id).first()
+        
+        if not note:
+            logger.warning(f"削除対象のノートが見つかりません: ID={note_id}")
+            raise NoteError('指定されたノートが見つかりません', 404)
+        
+        # 権限チェック: 自分のノートでなければ削除不可
+        if note.user_id != current_user_id:
+            logger.warning(f"ノートの削除権限がありません: ID={note_id}")
+            raise NoteError('このノートの削除権限がありません', 403)
             
-            if not note:
-                logger.warning(f"ノートが見つかりません: ID={note_id}")
-                raise NoteError('指定されたノートが見つかりません', 404)
-                
-            db.delete(note)
-            db.commit()
-            
-            logger.info(f"ノートを削除しました: ID={note_id}")
-            return jsonify({'message': 'ノートを削除しました'})
-            
-        except SQLAlchemyError as e:
-            db.rollback()
-            logger.error(f"データベースエラー: {str(e)}")
-            raise
-        finally:
-            db.close()
-            
+        db.delete(note)
+        db.commit()
+        
+        logger.info(f"ノートを削除しました: ID={note_id}")
+        return jsonify({'message': 'ノートを削除しました'})
+        
+    except NoteError as e:
+        logger.warning(f"ノート削除エラー: {str(e)}")
+        return jsonify({'error': str(e)}), e.status_code
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"データベースエラー: {str(e)}")
+        return jsonify({'error': 'データベース操作中にエラーが発生しました'}), 500
     except Exception as e:
         logger.error(f"予期せぬエラー: {str(e)}")
-        if not isinstance(e, (NoteError, SQLAlchemyError)):
-            return jsonify({'error': 'サーバーエラーが発生しました'}), 500
-        raise
+        return jsonify({'error': 'サーバーエラーが発生しました'}), 500
+    finally:
+        db.close()
 
 @notes_bp.route('/notes/<int:note_id>/pages', methods=['POST'])
+@jwt_required()
 def add_page(note_id):
     """指定されたノートに新しいページを追加するエンドポイント"""
     try:
-        logger.info(f"ページ追加リクエスト: ノートID={note_id}")
-        data = request.get_json()
+        # 現在の認証済みユーザーのIDを取得
+        current_user_id = get_jwt_identity()
         
+        data = request.get_json()
         if not data:
-            logger.warning("データが必要です")
-            raise NoteError('データが必要です')
-            
+            raise NoteError('ページデータが指定されていません')
+        
         db = Session()
-        try:
-            note = db.query(Note).filter(Note.id == note_id).first()
+        note = db.query(Note).filter(Note.id == note_id).first()
+        
+        if not note:
+            logger.warning(f"ページ追加対象のノートが見つかりません: ID={note_id}")
+            raise NoteError('指定されたノートが見つかりません', 404)
+        
+        # 権限チェック: 自分のノートでなければページ追加不可
+        if note.user_id != current_user_id:
+            logger.warning(f"ノートへのページ追加権限がありません: ID={note_id}")
+            raise NoteError('このノートへのページ追加権限がありません', 403)
             
-            if not note:
-                logger.warning(f"ノートが見つかりません: ID={note_id}")
-                raise NoteError('指定されたノートが見つかりません', 404)
-                
-            # 現在の最大ページ番号を取得
-            max_page = db.query(Page).filter(Page.note_id == note_id).order_by(Page.page_number.desc()).first()
-            next_page_number = (max_page.page_number + 1) if max_page else 1
-            
-            page = Page(
-                note_id=note_id,
-                page_number=next_page_number,
-                content=data.get('content', ''),
-                layout_settings=data.get('layout_settings', {})
-            )
-            
-            db.add(page)
-            db.commit()
-            
-            logger.info(f"ページを追加しました: ID={page.id}")
-            return jsonify({
-                'id': page.id,
-                'note_id': page.note_id,
-                'page_number': page.page_number,
-                'content': page.content,
-                'layout_settings': page.layout_settings
-            }), 201
-            
-        except SQLAlchemyError as e:
-            db.rollback()
-            logger.error(f"データベースエラー: {str(e)}")
-            raise
-        finally:
-            db.close()
-            
+        # 現在の最大ページ番号を取得
+        max_page = db.query(Page).filter(Page.note_id == note_id).order_by(Page.page_number.desc()).first()
+        next_page_number = (max_page.page_number + 1) if max_page else 1
+        
+        page = Page(
+            note_id=note_id,
+            page_number=next_page_number,
+            content=data.get('content', ''),
+            layout_settings=data.get('layout_settings', {})
+        )
+        
+        db.add(page)
+        db.commit()
+        
+        logger.info(f"ページを追加しました: ID={page.id}")
+        return jsonify({
+            'id': page.id,
+            'note_id': page.note_id,
+            'page_number': page.page_number,
+            'content': page.content,
+            'layout_settings': page.layout_settings
+        }), 201
+        
+    except NoteError as e:
+        logger.warning(f"ページ追加エラー: {str(e)}")
+        return jsonify({'error': str(e)}), e.status_code
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"データベースエラー: {str(e)}")
+        return jsonify({'error': 'データベース操作中にエラーが発生しました'}), 500
     except Exception as e:
         logger.error(f"予期せぬエラー: {str(e)}")
-        if not isinstance(e, (NoteError, SQLAlchemyError)):
-            return jsonify({'error': 'サーバーエラーが発生しました'}), 500
-        raise
+        return jsonify({'error': 'サーバーエラーが発生しました'}), 500
+    finally:
+        db.close()
 
 @notes_bp.route('/notes/<int:note_id>/pages/<int:page_id>', methods=['PUT'])
 def update_page(note_id, page_id):

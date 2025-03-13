@@ -1,8 +1,11 @@
 from flask import Flask
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 from routes.memo import memo_bp
+from routes.auth import auth_bp
 from database import init_db, shutdown_session
 import os
+from datetime import timedelta
 
 def create_app():
     """
@@ -15,6 +18,12 @@ def create_app():
 
     # デバッグモードを環境変数から設定
     app.debug = os.getenv('DEBUG', 'false').lower() == 'true'
+    
+    # JWT設定
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key-change-in-production')
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
+    app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
+    jwt = JWTManager(app)
 
     # CORSの設定 - シンプルな単一設定に変更
     CORS(app, 
@@ -33,8 +42,9 @@ def create_app():
     # セッション管理の設定
     app.teardown_appcontext(shutdown_session)
 
-    # APIルートの登録（プレフィックスを/api/memoに変更）
+    # APIルートの登録
     app.register_blueprint(memo_bp, url_prefix='/api/memo')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
     @app.route('/health')
     def health_check():

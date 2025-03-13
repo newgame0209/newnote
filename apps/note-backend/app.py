@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 from database import init_db, get_db
 from models import Note
 import os
@@ -7,6 +8,7 @@ from dotenv import load_dotenv
 from sqlalchemy.exc import SQLAlchemyError
 import logging
 import json
+from datetime import timedelta
 
 # .envファイルから環境変数を読み込む
 load_dotenv()
@@ -32,6 +34,12 @@ def create_app():
     
     # デバッグモードを環境変数から設定
     app.debug = os.getenv('APP_DEBUG', 'false').lower() == 'true'
+    
+    # JWT設定
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'super-secret-key-change-in-production')
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
+    app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
+    jwt = JWTManager(app)
 
     # CORSの設定 - より柔軟に対応
     CORS(app, 
@@ -85,8 +93,10 @@ def create_app():
 
     # APIルートの登録
     from routes import notes_bp, bookmarks_bp
+    from routes.auth import auth_bp
     app.register_blueprint(notes_bp, url_prefix='/api')
     app.register_blueprint(bookmarks_bp, url_prefix='/api')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
     # エラーハンドラー
     @app.errorhandler(Exception)

@@ -5,17 +5,23 @@ from models.memo import Memo
 from models.memopage import MemoPage
 from database import db_session
 import traceback
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 memo_bp = Blueprint('memo', __name__)
 
 @memo_bp.route('/memos', methods=['GET', 'POST', 'OPTIONS'])
+@jwt_required()
 def create_memo():
     if request.method == 'OPTIONS':
         return '', 204
     
     if request.method == 'GET':
         try:
-            memos = Memo.query.order_by(Memo.created_at.desc()).all()
+            # 現在の認証済みユーザーのIDを取得
+            current_user_id = get_jwt_identity()
+            
+            # 自分のメモのみを取得
+            memos = Memo.query.filter(Memo.user_id == current_user_id).order_by(Memo.created_at.desc()).all()
             return jsonify([{
                 'id': memo.id,
                 'title': memo.title,
@@ -30,12 +36,16 @@ def create_memo():
             return jsonify({'error': 'データベースエラー'}), 500
     
     try:
+        # 現在の認証済みユーザーのIDを取得
+        current_user_id = get_jwt_identity()
+        
         data = request.get_json()
         memo = Memo(
             title=data.get('title', '無題'),
             content=data.get('content', ''),
             main_category=data.get('main_category'),
-            sub_category=data.get('sub_category')
+            sub_category=data.get('sub_category'),
+            user_id=current_user_id  # ユーザーIDを設定
         )
         db_session.add(memo)
         db_session.commit()
@@ -89,105 +99,87 @@ def create_memo():
         db_session.rollback()
         return jsonify({'error': 'データベースエラー'}), 500
 
-@memo_bp.route('/memos/list', methods=['GET', 'OPTIONS'])
-def get_memos():
-    if request.method == 'OPTIONS':
-        return '', 204
-    try:
-        memos = Memo.query.all()
-        return jsonify([{
-            'id': memo.id,
-            'title': memo.title,
-            'content': memo.content,
-            'mainCategory': memo.main_category,
-            'subCategory': memo.sub_category,
-            'createdAt': memo.created_at,
-            'updatedAt': memo.updated_at
-        } for memo in memos])
-    except Exception as e:
-        print(f"Error getting memos: {str(e)}")
-        print(traceback.format_exc())
-        return jsonify({'error': '取得に失敗しました'}), 500
-
-@memo_bp.route('/memos/<int:memo_id>', methods=['GET', 'OPTIONS'])
+@memo_bp.route('/memos/<int:memo_id>', methods=['GET', 'PUT', 'DELETE', 'OPTIONS'])
+@jwt_required()
 def get_memo(memo_id):
     if request.method == 'OPTIONS':
         return '', 204
-    try:
-        memo = Memo.query.get(memo_id)
-        if not memo:
-            return jsonify({'error': 'メモが見つかりません'}), 404
+    
+    # 現在の認証済みユーザーのIDを取得
+    current_user_id = get_jwt_identity()
+    
+    if request.method == 'GET':
+        try:
+            memo = Memo.query.get(memo_id)
+            if not memo:
+                return jsonify({'error': '指定されたメモが見つかりません'}), 404
+            
+            # 権限チェック: 自分のメモでなければアクセス不可
+            if memo.user_id != current_user_id:
+                return jsonify({'error': 'このメモへのアクセス権限がありません'}), 403
+            
+            return jsonify({
+                'id': memo.id,
+                'title': memo.title,
+                'content': memo.content,
+                'mainCategory': memo.main_category,
+                'subCategory': memo.sub_category,
+                'createdAt': memo.created_at,
+                'updatedAt': memo.updated_at
+            })
+        except SQLAlchemyError:
+            db_session.rollback()
+            return jsonify({'error': 'データベースエラー'}), 500
+    
+    if request.method == 'PUT':
+        try:
+            memo = Memo.query.get(memo_id)
+            if not memo:
+                return jsonify({'error': '指定されたメモが見つかりません'}), 404
+            
+            # 権限チェック: 自分のメモでなければ更新不可
+            if memo.user_id != current_user_id:
+                return jsonify({'error': 'このメモの更新権限がありません'}), 403
+            
+            data = request.get_json()
+            memo.title = data.get('title', memo.title)
+            memo.content = data.get('content', memo.content)
+            memo.main_category = data.get('mainCategory', memo.main_category)
+            memo.sub_category = data.get('subCategory', memo.sub_category)
+            db_session.commit()
+            
+            return jsonify({
+                'id': memo.id,
+                'title': memo.title,
+                'content': memo.content,
+                'mainCategory': memo.main_category,
+                'subCategory': memo.sub_category,
+                'createdAt': memo.created_at,
+                'updatedAt': memo.updated_at
+            })
+        except SQLAlchemyError:
+            db_session.rollback()
+            return jsonify({'error': 'データベースエラー'}), 500
+    
+    if request.method == 'DELETE':
+        try:
+            memo = Memo.query.get(memo_id)
+            if not memo:
+                return jsonify({'error': '指定されたメモが見つかりません'}), 404
+            
+            # 権限チェック: 自分のメモでなければ削除不可
+            if memo.user_id != current_user_id:
+                return jsonify({'error': 'このメモの削除権限がありません'}), 403
+            
+            db_session.delete(memo)
+            db_session.commit()
+            return jsonify({'message': 'メモを削除しました'})
+        except SQLAlchemyError:
+            db_session.rollback()
+            return jsonify({'error': 'データベースエラー'}), 500
 
-        return jsonify({
-            'id': memo.id,
-            'title': memo.title,
-            'content': memo.content,
-            'mainCategory': memo.main_category,
-            'subCategory': memo.sub_category,
-            'createdAt': memo.created_at,
-            'updatedAt': memo.updated_at
-        })
-    except Exception as e:
-        print(f"Error getting memo {memo_id}: {str(e)}")
-        print(traceback.format_exc())
-        return jsonify({'error': '取得に失敗しました'}), 500
-
-@memo_bp.route('/memos/<int:memo_id>', methods=['PUT', 'OPTIONS'])
-def update_memo(memo_id):
-    if request.method == 'OPTIONS':
-        return '', 204
-    try:
-        memo = Memo.query.get(memo_id)
-        if not memo:
-            return jsonify({'error': 'メモが見つかりません'}), 404
-
-        data = request.get_json()
-        if 'title' in data:
-            memo.title = data['title']
-        if 'content' in data:
-            memo.content = data['content']
-        if 'main_category' in data:
-            memo.main_category = data['main_category']
-        if 'sub_category' in data:
-            memo.sub_category = data['sub_category']
-
-        db_session.commit()
-        return jsonify({
-            'id': memo.id,
-            'title': memo.title,
-            'content': memo.content,
-            'mainCategory': memo.main_category,
-            'subCategory': memo.sub_category,
-            'createdAt': memo.created_at,
-            'updatedAt': memo.updated_at
-        })
-    except Exception as e:
-        db_session.rollback()
-        print(f"Error updating memo {memo_id}: {str(e)}")
-        print(traceback.format_exc())
-        return jsonify({'error': '更新に失敗しました'}), 500
-
-@memo_bp.route('/memos/<int:memo_id>', methods=['DELETE', 'OPTIONS'])
-def delete_memo(memo_id):
-    if request.method == 'OPTIONS':
-        return '', 204
-    try:
-        memo = Memo.query.get(memo_id)
-        if not memo:
-            return jsonify({'error': 'メモが見つかりません'}), 404
-
-        db_session.delete(memo)
-        db_session.commit()
-        return '', 204
-    except Exception as e:
-        db_session.rollback()
-        print(f"Error deleting memo {memo_id}: {str(e)}")
-        print(traceback.format_exc())
-        return jsonify({'error': '削除に失敗しました'}), 500
-
-
-# メモページ操作用API
-@memo_bp.route('/memos/<int:memo_id>/pages', methods=['GET', 'POST'])
+@memo_bp.route('/memos/<int:memo_id>/pages', methods=['GET', 'POST', 'OPTIONS'])
+@jwt_required()
 def memo_pages(memo_id):
     """
     @docs
@@ -196,10 +188,21 @@ def memo_pages(memo_id):
     Args:
         memo_id: メモID
     """
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    # 現在の認証済みユーザーのIDを取得
+    current_user_id = get_jwt_identity()
+    
+    # メモの所有者確認
     memo = Memo.query.get(memo_id)
     if not memo:
-        return jsonify({'error': '指定されたメモが存在しません'}), 404
-
+        return jsonify({'error': '指定されたメモが見つかりません'}), 404
+    
+    # 権限チェック: 自分のメモでなければアクセス不可
+    if memo.user_id != current_user_id:
+        return jsonify({'error': 'このメモへのアクセス権限がありません'}), 403
+    
     # GET: メモのすべてのページを取得
     if request.method == 'GET':
         try:
@@ -254,8 +257,8 @@ def memo_pages(memo_id):
         traceback.print_exc()
         return jsonify({'error': 'ページの作成に失敗しました'}), 500
 
-
 @memo_bp.route('/memos/<int:memo_id>/pages/<int:page_number>', methods=['GET', 'PUT', 'DELETE'])
+@jwt_required()
 def memo_page(memo_id, page_number):
     """
     @docs
@@ -273,6 +276,11 @@ def memo_page(memo_id, page_number):
         if not memo:
             print(f"Memo {memo_id} not found")
             return jsonify({'error': '指定されたメモが存在しません'}), 404
+        
+        # 権限チェック: 自分のメモでなければアクセス不可
+        current_user_id = get_jwt_identity()
+        if memo.user_id != current_user_id:
+            return jsonify({'error': 'このメモへのアクセス権限がありません'}), 403
         
         # このメモの全ページを取得して詳細なデバッグ情報を出力
         all_pages = MemoPage.query.filter_by(memo_id=memo_id).all()
