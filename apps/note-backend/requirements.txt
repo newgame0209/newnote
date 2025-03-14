@@ -14,6 +14,7 @@ fastapi_cors==0.0.6
 flake8==7.0.0
 Flask>=2.0.1
 Flask-CORS>=3.0.10
+flask_jwt_extended==4.5.3
 google-api-core==2.24.1
 google-auth==2.38.0
 google-cloud-texttospeech>=2.5.2
