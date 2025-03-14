@@ -26,6 +26,10 @@ const authApi = {
         password,
         nickname
       }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
         withCredentials: true
       });
       return response.data;
@@ -49,6 +53,10 @@ const authApi = {
         email,
         password
       }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
         withCredentials: true
       });
       return response.data;
@@ -72,7 +80,9 @@ const authApi = {
         {},
         {
           headers: {
-            Authorization: `Bearer ${refreshToken}`
+            Authorization: `Bearer ${refreshToken}`,
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
           },
           withCredentials: true
         }
@@ -95,7 +105,9 @@ const authApi = {
     try {
       const response = await axios.get(`${API_URL}/api/auth/user`, {
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         },
         withCredentials: true
       });
@@ -115,6 +127,10 @@ const authApi = {
   getGoogleAuthUrl: async () => {
     try {
       const response = await axios.get(`${API_URL}/api/auth/google`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
         withCredentials: true
       });
       return response.data.auth_url;
@@ -134,6 +150,10 @@ const authApi = {
   googleCallback: async (code: string) => {
     try {
       const response = await axios.post(`${API_URL}/api/auth/google/callback`, { code }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
         withCredentials: true
       });
       return response.data;

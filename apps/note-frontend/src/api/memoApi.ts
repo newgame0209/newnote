@@ -8,7 +8,7 @@ import axios from 'axios';
 import { Memo, MemoPage, CreateMemoData, UpdateMemoData } from '@/types/memo';
 
 // 環境変数からAPI URLを取得、または本番用URLにフォールバック
-const API_BASE_URL = import.meta.env.VITE_MEMO_API_URL || 'https://memo-backend-7va4.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_MEMO_API_URL || 'https://memo-backend-7va4.onrender.com';
 
 /**
  * 認証トークン付きのAxiosインスタンスを作成
@@ -34,7 +34,7 @@ const memoApi = {
   getMemos: async (): Promise<Memo[]> => {
     try {
       const axiosInstance = getAuthAxios();
-      const response = await axiosInstance.get('/memo/memos/list');
+      const response = await axiosInstance.get('/api/memo/memos/list');
       return response.data;
     } catch (error) {
       console.error('メモ一覧の取得に失敗しました:', error);
@@ -48,7 +48,7 @@ const memoApi = {
   createMemo: async (data: CreateMemoData): Promise<Memo> => {
     try {
       const axiosInstance = getAuthAxios();
-      const response = await axiosInstance.post('/memo/memos', {
+      const response = await axiosInstance.post('/api/memo/memos', {
         title: data.title,
         content: data.content || '',
         main_category: data.mainCategory,
@@ -67,7 +67,7 @@ const memoApi = {
   getMemo: async (id: number): Promise<Memo> => {
     try {
       const axiosInstance = getAuthAxios();
-      const response = await axiosInstance.get(`/memo/memos/${id}`);
+      const response = await axiosInstance.get(`/api/memo/memos/${id}`);
       return response.data;
     } catch (error) {
       console.error(`メモ(ID: ${id})の取得に失敗しました:`, error);
@@ -81,7 +81,7 @@ const memoApi = {
   updateMemo: async (id: number, data: UpdateMemoData): Promise<Memo> => {
     try {
       const axiosInstance = getAuthAxios();
-      const response = await axiosInstance.put(`/memo/memos/${id}`, {
+      const response = await axiosInstance.put(`/api/memo/memos/${id}`, {
         title: data.title,
         content: data.content,
         main_category: data.mainCategory,
@@ -100,7 +100,7 @@ const memoApi = {
   deleteMemo: async (id: number): Promise<void> => {
     try {
       const axiosInstance = getAuthAxios();
-      await axiosInstance.delete(`/memo/memos/${id}`);
+      await axiosInstance.delete(`/api/memo/memos/${id}`);
     } catch (error) {
       console.error(`メモ(ID: ${id})の削除に失敗しました:`, error);
       throw new Error('メモの削除に失敗しました');
@@ -115,7 +115,7 @@ const memoApi = {
   getMemoPages: async (id: number): Promise<MemoPage[]> => {
     try {
       const axiosInstance = getAuthAxios();
-      const response = await axiosInstance.get(`/memo/memos/${id}/pages`);
+      const response = await axiosInstance.get(`/api/memo/memos/${id}/pages`);
       return response.data;
     } catch (error) {
       console.error(`メモ(ID: ${id})のページ一覧の取得に失敗しました:`, error);
@@ -132,7 +132,7 @@ const memoApi = {
   getMemoPage: async (id: number, pageNumber: number): Promise<MemoPage> => {
     try {
       const axiosInstance = getAuthAxios();
-      const response = await axiosInstance.get(`/memo/memos/${id}/pages/${pageNumber}`);
+      const response = await axiosInstance.get(`/api/memo/memos/${id}/pages/${pageNumber}`);
       return response.data;
     } catch (error) {
       console.error(`メモ(ID: ${id})のページ(${pageNumber})の取得に失敗しました:`, error);
@@ -149,7 +149,7 @@ const memoApi = {
   addMemoPage: async (id: number, content: string = ''): Promise<MemoPage> => {
     try {
       const axiosInstance = getAuthAxios();
-      const response = await axiosInstance.post(`/memo/memos/${id}/pages`, { content });
+      const response = await axiosInstance.post(`/api/memo/memos/${id}/pages`, { content });
       return response.data;
     } catch (error) {
       console.error(`メモ(ID: ${id})への新規ページ追加に失敗しました:`, error);
@@ -167,7 +167,7 @@ const memoApi = {
   updateMemoPage: async (id: number, pageNumber: number, content: string): Promise<MemoPage> => {
     try {
       const axiosInstance = getAuthAxios();
-      const response = await axiosInstance.put(`/memo/memos/${id}/pages/${pageNumber}`, { content });
+      const response = await axiosInstance.put(`/api/memo/memos/${id}/pages/${pageNumber}`, { content });
       return response.data;
     } catch (error) {
       console.error(`メモ(ID: ${id})のページ(${pageNumber})の更新に失敗しました:`, error);
@@ -184,7 +184,7 @@ const memoApi = {
   deleteMemoPage: async (id: number, pageNumber: number): Promise<void> => {
     try {
       const axiosInstance = getAuthAxios();
-      await axiosInstance.delete(`/memo/memos/${id}/pages/${pageNumber}`);
+      await axiosInstance.delete(`/api/memo/memos/${id}/pages/${pageNumber}`);
     } catch (error) {
       console.error(`メモ(ID: ${id})のページ(${pageNumber})の削除に失敗しました:`, error);
       throw new Error('メモのページの削除に失敗しました');

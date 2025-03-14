@@ -2,7 +2,7 @@ import { Note, CreateNoteData } from '../types/note';
 import axios from 'axios'; // axiosをインポートする
 
 // 相対パスを使用
-export const API_BASE_URL = import.meta.env.VITE_NOTE_API_URL || 'https://newnote-backend.onrender.com/api';
+export const API_BASE_URL = import.meta.env.VITE_NOTE_API_URL || 'https://newnote-backend.onrender.com';
 
 /**
  * 認証トークン付きのAxiosインスタンスを作成
@@ -22,13 +22,13 @@ const getAuthAxios = () => {
 };
 
 /**
- * ノート作成APIを呼び出す
+ * ノートを作成する
  * @param data 作成するノートのデータ
  */
 export const createNote = async (data: CreateNoteData): Promise<Note> => {
   try {
     const axiosInstance = getAuthAxios();
-    const response = await axiosInstance.post('/notes', data);
+    const response = await axiosInstance.post('/api/notes', data);
     return response.data;
   } catch (error) {
     console.error('Error creating note:', error);
@@ -43,7 +43,7 @@ export const createNote = async (data: CreateNoteData): Promise<Note> => {
 export const fetchNote = async (id: string): Promise<Note> => {
   try {
     const axiosInstance = getAuthAxios();
-    const response = await axiosInstance.get(`/notes/${id}`);
+    const response = await axiosInstance.get(`/api/notes/${id}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching note ${id}:`, error);
@@ -59,7 +59,7 @@ export const fetchNote = async (id: string): Promise<Note> => {
 export const updateNote = async (id: string, data: Partial<CreateNoteData>): Promise<Note> => {
   try {
     const axiosInstance = getAuthAxios();
-    const response = await axiosInstance.put(`/notes/${id}`, data);
+    const response = await axiosInstance.put(`/api/notes/${id}`, data);
     return response.data;
   } catch (error) {
     console.error(`Error updating note ${id}:`, error);
@@ -74,7 +74,7 @@ export const updateNote = async (id: string, data: Partial<CreateNoteData>): Pro
 export const deleteNote = async (id: string): Promise<void> => {
   try {
     const axiosInstance = getAuthAxios();
-    await axiosInstance.delete(`/notes/${id}`);
+    await axiosInstance.delete(`/api/notes/${id}`);
   } catch (error) {
     console.error(`Error deleting note ${id}:`, error);
     throw new Error('ノートの削除中にエラーが発生しました');
@@ -87,7 +87,7 @@ export const deleteNote = async (id: string): Promise<void> => {
 export const fetchNotes = async (): Promise<Note[]> => {
   try {
     const axiosInstance = getAuthAxios();
-    const response = await axiosInstance.get('/notes');
+    const response = await axiosInstance.get('/api/notes');
     return response.data;
   } catch (error) {
     console.error('Error fetching notes:', error);
@@ -101,7 +101,7 @@ export const fetchNotes = async (): Promise<Note[]> => {
 export const updatePage = async (noteId: string | number, pageNumber: number, content: string): Promise<any> => {
   try {
     const axiosInstance = getAuthAxios();
-    const response = await axiosInstance.put(`/notes/${noteId}/pages/${pageNumber}`, { content });
+    const response = await axiosInstance.put(`/api/notes/${noteId}/pages/${pageNumber}`, { content });
     return response.data;
   } catch (error) {
     console.error(`Error updating page ${pageNumber} for note ${noteId}:`, error);
@@ -115,7 +115,7 @@ export const updatePage = async (noteId: string | number, pageNumber: number, co
 export const getPage = async (noteId: string | number, pageNumber: number): Promise<any> => {
   try {
     const axiosInstance = getAuthAxios();
-    const response = await axiosInstance.get(`/notes/${noteId}/pages/${pageNumber}`);
+    const response = await axiosInstance.get(`/api/notes/${noteId}/pages/${pageNumber}`);
     return response.data;
   } catch (error) {
     console.error(`Error getting page ${pageNumber} for note ${noteId}:`, error);
@@ -133,7 +133,7 @@ export const getPage = async (noteId: string | number, pageNumber: number): Prom
 export const executeOCR = async (noteId: number, pageNumber: number, imageData: string): Promise<string> => {
   try {
     const axiosInstance = getAuthAxios();
-    const response = await axiosInstance.post(`/notes/${noteId}/pages/${pageNumber}/ocr`, { image_data: imageData });
+    const response = await axiosInstance.post(`/api/notes/${noteId}/pages/${pageNumber}/ocr`, { image_data: imageData });
     return response.data.text;
   } catch (error) {
     console.error('Error executing OCR:', error);
@@ -156,7 +156,7 @@ export const synthesizeSpeech = async (
   try {
     const axiosInstance = getAuthAxios();
     const response = await axiosInstance.post(
-      '/tts',
+      '/api/tts',
       {
         text,
         voice_type: voiceType,
