@@ -25,6 +25,8 @@ const authApi = {
         email,
         password,
         nickname
+      }, {
+        withCredentials: true
       });
       return response.data;
     } catch (error) {
@@ -46,6 +48,8 @@ const authApi = {
       const response = await axios.post(`${API_URL}/api/auth/login`, {
         email,
         password
+      }, {
+        withCredentials: true
       });
       return response.data;
     } catch (error) {
@@ -69,7 +73,8 @@ const authApi = {
         {
           headers: {
             Authorization: `Bearer ${refreshToken}`
-          }
+          },
+          withCredentials: true
         }
       );
       return response.data.access_token;
@@ -91,7 +96,8 @@ const authApi = {
       const response = await axios.get(`${API_URL}/api/auth/user`, {
         headers: {
           Authorization: `Bearer ${token}`
-        }
+        },
+        withCredentials: true
       });
       return response.data;
     } catch (error) {
@@ -108,7 +114,9 @@ const authApi = {
    */
   getGoogleAuthUrl: async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/auth/google`);
+      const response = await axios.get(`${API_URL}/api/auth/google`, {
+        withCredentials: true
+      });
       return response.data.auth_url;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
@@ -125,7 +133,9 @@ const authApi = {
    */
   googleCallback: async (code: string) => {
     try {
-      const response = await axios.post(`${API_URL}/api/auth/google/callback`, { code });
+      const response = await axios.post(`${API_URL}/api/auth/google/callback`, { code }, {
+        withCredentials: true
+      });
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {

@@ -23,7 +23,7 @@ const getAuthAxios = () => {
       'X-Requested-With': 'XMLHttpRequest',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     },
-    withCredentials: true
+    withCredentials: true // CORSリクエストでクッキーを送信
   });
 };
 

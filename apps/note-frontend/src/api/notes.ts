@@ -2,7 +2,7 @@ import { Note, CreateNoteData } from '../types/note';
 import axios from 'axios'; // axiosをインポートする
 
 // 相対パスを使用
-export const API_BASE_URL = '/api';
+export const API_BASE_URL = import.meta.env.VITE_NOTE_API_URL || 'https://newnote-backend.onrender.com/api';
 
 /**
  * 認証トークン付きのAxiosインスタンスを作成
@@ -16,7 +16,8 @@ const getAuthAxios = () => {
       'Content-Type': 'application/json',
       'X-Requested-With': 'XMLHttpRequest',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    }
+    },
+    withCredentials: true // CORSリクエストでクッキーを送信
   });
 };
 

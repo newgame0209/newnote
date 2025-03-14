@@ -101,9 +101,9 @@ export default function Home() {
   }, [activeTab, deleteNote, deleteMemo, noteToDelete, memoToDelete]);
 
   const sortedNotes = useMemo(() => {
-    let filtered = notes;
+    let filtered = notes || [];
     if (activeCategory !== 'all') {
-      filtered = notes.filter(note => note.main_category === activeCategory);
+      filtered = filtered.filter(note => note.main_category === activeCategory);
     }
     return filtered.sort((a, b) => {
       if (sortBy === 'newest') {
@@ -115,9 +115,9 @@ export default function Home() {
   }, [notes, activeCategory, sortBy]);
 
   const sortedMemos = useMemo(() => {
-    let filtered = memos;
+    let filtered = memos || [];
     if (activeCategory !== 'all') {
-      filtered = memos.filter(memo => memo.mainCategory === activeCategory);
+      filtered = filtered.filter(memo => memo.mainCategory === activeCategory);
     }
     return filtered.sort((a, b) => {
       if (sortBy === 'newest') {
@@ -275,7 +275,7 @@ export default function Home() {
                 <button
                   className="rounded-md bg-transparent px-3 sm:px-4 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors"
                 >
-                  <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Settings className="w-4 h-4" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
