@@ -25,3 +25,10 @@ def init_db():
 
 def shutdown_session(exception=None):
     db_session.remove()
+
+def get_db():
+    """データベースセッションを取得する関数"""
+    try:
+        return db_session
+    finally:
+        db_session.remove()
