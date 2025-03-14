@@ -26,7 +26,7 @@ const Index = () => {
   };
 
   const handleBack = () => {
-    window.location.href = 'http://localhost:3000';
+    window.location.href = import.meta.env.VITE_APP_URL || 'https://newnote-tau.vercel.app';
   };
 
   const toggleTheme = () => {

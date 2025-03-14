@@ -7,7 +7,7 @@
 import axios from 'axios';
 import { Memo, MemoPage, CreateMemoData, UpdateMemoData } from '@/types/memo';
 
-const API_BASE_URL = import.meta.env.VITE_MEMO_API_URL || 'http://localhost:5002/api';
+const API_BASE_URL = import.meta.env.VITE_MEMO_API_URL || 'https://memo-backend-7va4.onrender.com/api';
 
 /**
  * 認証トークン付きのAxiosインスタンスを作成

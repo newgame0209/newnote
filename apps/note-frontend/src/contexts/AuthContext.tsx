@@ -37,7 +37,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // APIのベースURL
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_URL = import.meta.env.VITE_API_URL || 'https://note-backend-3aqt.onrender.com';
 
 /**
  * 認証プロバイダーコンポーネント

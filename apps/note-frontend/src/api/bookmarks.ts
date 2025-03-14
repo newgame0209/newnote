@@ -8,7 +8,7 @@ declare global {
   }
 }
 
-const API_BASE_URL = import.meta.env.VITE_NOTE_API_URL || 'http://localhost:5001/api';
+const API_BASE_URL = import.meta.env.VITE_NOTE_API_URL || 'https://note-backend-3aqt.onrender.com/api';
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
