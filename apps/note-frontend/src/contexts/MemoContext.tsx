@@ -39,6 +39,12 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
 
   const fetchMemos = useCallback(async () => {
+    // トークンがない場合は処理をスキップ
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);

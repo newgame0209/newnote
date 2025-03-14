@@ -104,8 +104,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
    * 認証状態を確認
    */
   const checkAuth = useCallback(async (): Promise<boolean> => {
+    // トークンがない場合は何もしない
     if (!token) {
-      setLoading(false);
       return false;
     }
 
@@ -128,8 +128,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // 初回レンダリング時に認証状態を確認
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    // トークンが存在する場合のみ認証確認を行う
+    if (token) {
+      checkAuth();
+    }
+  }, [checkAuth, token]);
 
   /**
    * ログイン処理

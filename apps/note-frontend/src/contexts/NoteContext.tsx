@@ -83,6 +83,12 @@ export function NoteProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchNotes = useCallback(async (): Promise<void> => {
+    // トークンがない場合は処理をスキップ
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     try {
