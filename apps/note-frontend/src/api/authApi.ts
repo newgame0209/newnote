@@ -6,11 +6,10 @@
 // APIのベースURL
 const API_URL = import.meta.env.VITE_API_URL || 'https://newnote-backend.onrender.com';
 
-// CORSオプションを設定
+// CORSオプションを設定（シンプル化）
 const defaultOptions: RequestInit = {
   headers: {
-    'Content-Type': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
+    'Content-Type': 'application/json'
   },
   credentials: 'include' as RequestCredentials,
   mode: 'cors' as RequestMode
@@ -32,7 +31,9 @@ const authApi = {
       // fetchAPIを使用して直接リクエスト
       const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
-        ...defaultOptions,
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ email, password, nickname })
       });
 
@@ -57,7 +58,9 @@ const authApi = {
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
-        ...defaultOptions,
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ email, password })
       });
 
@@ -80,9 +83,8 @@ const authApi = {
     try {
       const response = await fetch(`${API_URL}/api/auth/refresh`, {
         method: 'POST',
-        ...defaultOptions,
         headers: {
-          ...defaultOptions.headers as Record<string, string>,
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${refreshToken}`
         }
       });
@@ -107,9 +109,8 @@ const authApi = {
     try {
       const response = await fetch(`${API_URL}/api/auth/user`, {
         method: 'GET',
-        ...defaultOptions,
         headers: {
-          ...defaultOptions.headers as Record<string, string>,
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         }
       });
@@ -132,7 +133,9 @@ const authApi = {
     try {
       const response = await fetch(`${API_URL}/api/auth/google`, {
         method: 'GET',
-        ...defaultOptions
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -155,7 +158,9 @@ const authApi = {
     try {
       const response = await fetch(`${API_URL}/api/auth/google/callback`, {
         method: 'POST',
-        ...defaultOptions,
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ code })
       });
 

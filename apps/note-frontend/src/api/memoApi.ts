@@ -6,38 +6,29 @@
 
 import { Memo, MemoPage, CreateMemoData, UpdateMemoData } from '@/types/memo';
 
-// APIのベースURL
-export const API_BASE_URL = import.meta.env.VITE_MEMO_API_URL || 'https://memo-backend-7va4.onrender.com';
-
-// CORSオプションを設定
-const defaultOptions: RequestInit = {
-  headers: {
-    'Content-Type': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest'
-  },
-  credentials: 'include' as RequestCredentials,
-  mode: 'cors' as RequestMode
-};
+// 環境変数からAPIのURL取得、またはデフォルト値を使用
+const API_BASE_URL = import.meta.env.VITE_MEMO_API_URL || 'https://memo-backend-7va4.onrender.com';
 
 /**
- * 認証トークン付きのリクエストオプションを取得
+ * 認証情報付きのリクエストオプションを生成
  */
 const getAuthOptions = (method: string, body?: any): RequestInit => {
   const token = localStorage.getItem('token');
   
   return {
     method,
-    ...defaultOptions,
     headers: {
-      ...defaultOptions.headers as Record<string, string>,
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     },
+    credentials: 'include' as RequestCredentials, // 型を明示的に指定
     ...(body ? { body: JSON.stringify(body) } : {})
   };
 };
 
 /**
- * メモAPIクライアント
+ * メモAPIの機能を提供するオブジェクト
  */
 const memoApi = {
   /**
@@ -45,7 +36,7 @@ const memoApi = {
    */
   getMemos: async (): Promise<Memo[]> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/memo/memos/list`, getAuthOptions('GET'));
+      const response = await fetch(`${API_BASE_URL}/memos`, getAuthOptions('GET'));
       
       if (!response.ok) {
         console.error('メモ一覧取得エラー:', response.status, response.statusText);

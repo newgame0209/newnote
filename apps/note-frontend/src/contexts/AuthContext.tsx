@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
 import authApi from '@/api/authApi';
 
 /**
@@ -51,55 +50,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const navigate = useNavigate();
   const location = useLocation();
 
-  // トークンをヘッダーに設定するAxiosインスタンス
-  const authAxios = axios.create({
-    baseURL: API_URL,
-  });
-
-  // リクエストインターセプター: トークンをヘッダーに追加
-  authAxios.interceptors.request.use(
-    (config) => {
-      if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => {
-      return Promise.reject(error);
-    }
-  );
-
-  // レスポンスインターセプター: 認証エラー処理
-  authAxios.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const originalRequest = error.config;
-      
-      // 401エラーでリフレッシュトークンが存在し、リトライフラグがない場合
-      if (error.response?.status === 401 && refreshToken && !originalRequest._retry) {
-        originalRequest._retry = true;
-        
-        try {
-          // トークンのリフレッシュを試みる
-          const newToken = await authApi.refreshToken(refreshToken);
-          
-          localStorage.setItem('token', newToken);
-          setToken(newToken);
-          
-          // 新しいトークンでリクエストを再試行
-          originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-          return axios(originalRequest);
-        } catch (refreshError) {
-          // リフレッシュに失敗した場合はログアウト
-          logout();
-          return Promise.reject(refreshError);
-        }
-      }
-      
-      return Promise.reject(error);
-    }
-  );
-
   /**
    * 認証状態を確認
    */
@@ -111,13 +61,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       setLoading(true);
-      const userData = await authApi.getUserInfo(token);
+      const response = await fetch(`${API_URL}/users/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+      const userData = await response.json();
       setUser(userData);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('認証確認に失敗しました', error);
       // トークンが無効な場合はログアウト
-      if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+      if (error instanceof Error && error.message.includes('401')) {
         logout();
       }
       return false;
@@ -142,8 +100,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
     
     try {
-      const response = await authApi.login(email, password);
-      const { access_token, refresh_token, user: userData } = response;
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+      const data = await response.json();
+      const { access_token, refresh_token, user: userData } = data;
       
       localStorage.setItem('token', access_token);
       localStorage.setItem('refreshToken', refresh_token);
@@ -172,7 +140,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
     
     try {
-      const authUrl = await authApi.getGoogleAuthUrl();
+      const response = await fetch(`${API_URL}/auth/google/url`, {
+        method: 'GET',
+      });
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+      const authUrl = await response.text();
       window.location.href = authUrl;
     } catch (error: any) {
       let errorMessage = 'Google認証の開始に失敗しました';
@@ -192,8 +166,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
     
     try {
-      const response = await authApi.googleCallback(code);
-      const { access_token, refresh_token, user: userData } = response;
+      const response = await fetch(`${API_URL}/auth/google/callback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      });
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+      const data = await response.json();
+      const { access_token, refresh_token, user: userData } = data;
       
       localStorage.setItem('token', access_token);
       localStorage.setItem('refreshToken', refresh_token);
@@ -222,7 +206,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
     
     try {
-      await authApi.register(email, password, nickname);
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, nickname }),
+      });
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
       // 登録成功後、自動的にログイン
       await login(email, password);
     } catch (error: any) {
