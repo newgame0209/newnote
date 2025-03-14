@@ -1,7 +1,8 @@
 import { Note, CreateNoteData } from '../types/note';
-import axios from 'axios';
+import axios from 'axios'; // axiosをインポートする
 
-const API_BASE_URL = import.meta.env.VITE_NOTE_API_URL || 'https://note-backend-3aqt.onrender.com/api';
+// 相対パスを使用
+export const API_BASE_URL = '/api';
 
 /**
  * 認証トークン付きのAxiosインスタンスを作成

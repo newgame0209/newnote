@@ -6,7 +6,7 @@
 import axios from 'axios';
 
 // APIのベースURL
-const API_URL = import.meta.env.VITE_API_URL || 'https://note-backend-3aqt.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || 'https://newnote-backend.onrender.com';
 
 /**
  * 認証用APIクライアント

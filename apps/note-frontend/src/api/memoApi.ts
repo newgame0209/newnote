@@ -7,6 +7,7 @@
 import axios from 'axios';
 import { Memo, MemoPage, CreateMemoData, UpdateMemoData } from '@/types/memo';
 
+// 環境変数からAPI URLを取得、または本番用URLにフォールバック
 const API_BASE_URL = import.meta.env.VITE_MEMO_API_URL || 'https://memo-backend-7va4.onrender.com/api';
 
 /**
@@ -47,7 +48,12 @@ const memoApi = {
   createMemo: async (data: CreateMemoData): Promise<Memo> => {
     try {
       const axiosInstance = getAuthAxios();
-      const response = await axiosInstance.post('/memo/memos', data);
+      const response = await axiosInstance.post('/memo/memos', {
+        title: data.title,
+        content: data.content || '',
+        main_category: data.mainCategory,
+        sub_category: data.subCategory
+      });
       return response.data;
     } catch (error) {
       console.error('メモの作成に失敗しました:', error);
@@ -75,7 +81,12 @@ const memoApi = {
   updateMemo: async (id: number, data: UpdateMemoData): Promise<Memo> => {
     try {
       const axiosInstance = getAuthAxios();
-      const response = await axiosInstance.put(`/memo/memos/${id}`, data);
+      const response = await axiosInstance.put(`/memo/memos/${id}`, {
+        title: data.title,
+        content: data.content,
+        main_category: data.mainCategory,
+        sub_category: data.subCategory
+      });
       return response.data;
     } catch (error) {
       console.error(`メモ(ID: ${id})の更新に失敗しました:`, error);

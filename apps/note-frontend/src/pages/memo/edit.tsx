@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ArrowLeft, Plus, Moon, Sun, Mic } from "lucide-react";
+import { ArrowLeft, Plus, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -26,7 +26,7 @@ const Index = () => {
   };
 
   const handleBack = () => {
-    window.location.href = import.meta.env.VITE_APP_URL || 'https://newnote-tau.vercel.app';
+    window.location.href = import.meta.env.VITE_APP_URL || 'https://mynote-psi-three.vercel.app';
   };
 
   const toggleTheme = () => {
