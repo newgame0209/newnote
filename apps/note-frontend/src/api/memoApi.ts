@@ -15,7 +15,7 @@ const defaultOptions: RequestInit = {
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest'
   },
-  credentials: 'include',
+  credentials: 'include' as RequestCredentials,
   mode: 'cors' as RequestMode
 };
 
@@ -48,13 +48,14 @@ const memoApi = {
       const response = await fetch(`${API_BASE_URL}/api/memo/memos/list`, getAuthOptions('GET'));
       
       if (!response.ok) {
-        throw new Error('メモ一覧の取得に失敗しました');
+        console.error('メモ一覧取得エラー:', response.status, response.statusText);
+        throw new Error(response.statusText || 'メモ一覧の取得に失敗しました');
       }
       
       return await response.json();
     } catch (error) {
-      console.error('メモ一覧の取得に失敗しました:', error);
-      throw new Error('メモ一覧の取得に失敗しました');
+      console.error('メモ一覧取得中のエラー:', error);
+      throw error;
     }
   },
 
@@ -73,13 +74,14 @@ const memoApi = {
       const response = await fetch(`${API_BASE_URL}/api/memo/memos`, getAuthOptions('POST', body));
       
       if (!response.ok) {
-        throw new Error('メモの作成に失敗しました');
+        console.error('メモ作成エラー:', response.status, response.statusText);
+        throw new Error(response.statusText || 'メモの作成に失敗しました');
       }
       
       return await response.json();
     } catch (error) {
-      console.error('メモの作成に失敗しました:', error);
-      throw new Error('メモの作成に失敗しました');
+      console.error('メモ作成中のエラー:', error);
+      throw error;
     }
   },
 
@@ -91,13 +93,14 @@ const memoApi = {
       const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}`, getAuthOptions('GET'));
       
       if (!response.ok) {
-        throw new Error('メモの取得に失敗しました');
+        console.error('メモ取得エラー:', response.status, response.statusText);
+        throw new Error(response.statusText || 'メモの取得に失敗しました');
       }
       
       return await response.json();
     } catch (error) {
-      console.error(`メモ(ID: ${id})の取得に失敗しました:`, error);
-      throw new Error('メモの取得に失敗しました');
+      console.error(`メモ(ID: ${id})の取得中のエラー:`, error);
+      throw error;
     }
   },
 
@@ -116,13 +119,14 @@ const memoApi = {
       const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}`, getAuthOptions('PUT', body));
       
       if (!response.ok) {
-        throw new Error('メモの更新に失敗しました');
+        console.error('メモ更新エラー:', response.status, response.statusText);
+        throw new Error(response.statusText || 'メモの更新に失敗しました');
       }
       
       return await response.json();
     } catch (error) {
-      console.error(`メモ(ID: ${id})の更新に失敗しました:`, error);
-      throw new Error('メモの更新に失敗しました');
+      console.error(`メモ(ID: ${id})の更新中のエラー:`, error);
+      throw error;
     }
   },
 
@@ -134,11 +138,12 @@ const memoApi = {
       const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}`, getAuthOptions('DELETE'));
       
       if (!response.ok) {
-        throw new Error('メモの削除に失敗しました');
+        console.error('メモ削除エラー:', response.status, response.statusText);
+        throw new Error(response.statusText || 'メモの削除に失敗しました');
       }
     } catch (error) {
-      console.error(`メモ(ID: ${id})の削除に失敗しました:`, error);
-      throw new Error('メモの削除に失敗しました');
+      console.error(`メモ(ID: ${id})の削除中のエラー:`, error);
+      throw error;
     }
   },
 
@@ -152,13 +157,14 @@ const memoApi = {
       const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}/pages`, getAuthOptions('GET'));
       
       if (!response.ok) {
-        throw new Error('メモのページ一覧の取得に失敗しました');
+        console.error('メモページ一覧取得エラー:', response.status, response.statusText);
+        throw new Error(response.statusText || 'メモのページ一覧の取得に失敗しました');
       }
       
       return await response.json();
     } catch (error) {
-      console.error(`メモ(ID: ${id})のページ一覧の取得に失敗しました:`, error);
-      throw new Error('メモのページ一覧の取得に失敗しました');
+      console.error(`メモ(ID: ${id})のページ一覧取得中のエラー:`, error);
+      throw error;
     }
   },
 
@@ -173,13 +179,14 @@ const memoApi = {
       const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}/pages/${pageNumber}`, getAuthOptions('GET'));
       
       if (!response.ok) {
-        throw new Error('メモのページの取得に失敗しました');
+        console.error('メモページ取得エラー:', response.status, response.statusText);
+        throw new Error(response.statusText || 'メモのページの取得に失敗しました');
       }
       
       return await response.json();
     } catch (error) {
-      console.error(`メモ(ID: ${id})のページ(${pageNumber})の取得に失敗しました:`, error);
-      throw new Error('メモのページの取得に失敗しました');
+      console.error(`メモ(ID: ${id})のページ(${pageNumber})取得中のエラー:`, error);
+      throw error;
     }
   },
 
@@ -196,13 +203,14 @@ const memoApi = {
       const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}/pages`, getAuthOptions('POST', body));
       
       if (!response.ok) {
-        throw new Error('メモへの新規ページ追加に失敗しました');
+        console.error('メモページ追加エラー:', response.status, response.statusText);
+        throw new Error(response.statusText || 'メモへの新規ページ追加に失敗しました');
       }
       
       return await response.json();
     } catch (error) {
-      console.error(`メモ(ID: ${id})への新規ページ追加に失敗しました:`, error);
-      throw new Error('メモへの新規ページ追加に失敗しました');
+      console.error(`メモ(ID: ${id})への新規ページ追加中のエラー:`, error);
+      throw error;
     }
   },
 
@@ -220,13 +228,14 @@ const memoApi = {
       const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}/pages/${pageNumber}`, getAuthOptions('PUT', body));
       
       if (!response.ok) {
-        throw new Error('メモのページの更新に失敗しました');
+        console.error('メモページ更新エラー:', response.status, response.statusText);
+        throw new Error(response.statusText || 'メモのページの更新に失敗しました');
       }
       
       return await response.json();
     } catch (error) {
-      console.error(`メモ(ID: ${id})のページ(${pageNumber})の更新に失敗しました:`, error);
-      throw new Error('メモのページの更新に失敗しました');
+      console.error(`メモ(ID: ${id})のページ(${pageNumber})更新中のエラー:`, error);
+      throw error;
     }
   },
 
@@ -241,11 +250,12 @@ const memoApi = {
       const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}/pages/${pageNumber}`, getAuthOptions('DELETE'));
       
       if (!response.ok) {
-        throw new Error('メモのページの削除に失敗しました');
+        console.error('メモページ削除エラー:', response.status, response.statusText);
+        throw new Error(response.statusText || 'メモのページの削除に失敗しました');
       }
     } catch (error) {
-      console.error(`メモ(ID: ${id})のページ(${pageNumber})の削除に失敗しました:`, error);
-      throw new Error('メモのページの削除に失敗しました');
+      console.error(`メモ(ID: ${id})のページ(${pageNumber})削除中のエラー:`, error);
+      throw error;
     }
   }
 };

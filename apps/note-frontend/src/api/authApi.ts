@@ -10,9 +10,9 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://newnote-backend.onrende
 const defaultOptions: RequestInit = {
   headers: {
     'Content-Type': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest'
+    'X-Requested-With': 'XMLHttpRequest',
   },
-  credentials: 'include',
+  credentials: 'include' as RequestCredentials,
   mode: 'cors' as RequestMode
 };
 
@@ -37,13 +37,13 @@ const authApi = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'ユーザー登録に失敗しました');
+        throw new Error(response.statusText || 'ユーザー登録に失敗しました');
       }
 
       return await response.json();
     } catch (error) {
-      throw new Error('ネットワークエラーが発生しました');
+      console.error('登録エラー:', error);
+      throw error;
     }
   },
 
@@ -62,13 +62,13 @@ const authApi = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'ログインに失敗しました');
+        throw new Error(response.statusText || 'ログインに失敗しました');
       }
 
       return await response.json();
     } catch (error) {
-      throw new Error('ネットワークエラーが発生しました');
+      console.error('ログインエラー:', error);
+      throw error;
     }
   },
 
@@ -83,18 +83,19 @@ const authApi = {
         ...defaultOptions,
         headers: {
           ...defaultOptions.headers as Record<string, string>,
-          Authorization: `Bearer ${refreshToken}`
+          'Authorization': `Bearer ${refreshToken}`
         }
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'トークンの更新に失敗しました');
+        throw new Error(response.statusText || 'トークンの更新に失敗しました');
       }
 
-      return (await response.json()).access_token;
+      const data = await response.json();
+      return data.access_token;
     } catch (error) {
-      throw new Error('ネットワークエラーが発生しました');
+      console.error('トークンリフレッシュエラー:', error);
+      throw error;
     }
   },
 
@@ -109,18 +110,18 @@ const authApi = {
         ...defaultOptions,
         headers: {
           ...defaultOptions.headers as Record<string, string>,
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'ユーザー情報の取得に失敗しました');
+        throw new Error(response.statusText || 'ユーザー情報の取得に失敗しました');
       }
 
       return await response.json();
     } catch (error) {
-      throw new Error('ネットワークエラーが発生しました');
+      console.error('ユーザー情報取得エラー:', error);
+      throw error;
     }
   },
 
@@ -135,13 +136,14 @@ const authApi = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Google認証URLの取得に失敗しました');
+        throw new Error(response.statusText || 'Google認証URLの取得に失敗しました');
       }
 
-      return (await response.json()).auth_url;
+      const data = await response.json();
+      return data.auth_url;
     } catch (error) {
-      throw new Error('ネットワークエラーが発生しました');
+      console.error('Google認証URL取得エラー:', error);
+      throw error;
     }
   },
 
@@ -158,13 +160,13 @@ const authApi = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Google認証に失敗しました');
+        throw new Error(response.statusText || 'Google認証に失敗しました');
       }
 
       return await response.json();
     } catch (error) {
-      throw new Error('ネットワークエラーが発生しました');
+      console.error('Google認証コールバックエラー:', error);
+      throw error;
     }
   }
 };
