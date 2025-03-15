@@ -38,9 +38,11 @@ export const getAuthHeaders = () => {
 
 // 認証リクエストオプション取得
 export const getAuthOptions = (method: string, body?: any): RequestInit => {
+  const headers = getAuthHeaders();
+  
   const options: RequestInit = {
     method,
-    headers: getAuthHeaders(),
+    headers,
     mode: 'cors',
     credentials: 'include'
   };
@@ -64,6 +66,11 @@ const authApi = {
       // fetchAPIを使用して直接リクエスト
       const response = await fetch(`${API_URL}/auth/register`, getAuthOptions('POST', { email, password, nickname }));
 
+      console.log('登録レスポンス:', {
+        status: response.status,
+        statusText: response.statusText
+      });
+
       if (!response.ok) {
         throw new Error(response.statusText || 'ユーザー登録に失敗しました');
       }
@@ -82,6 +89,11 @@ const authApi = {
     try {
       const response = await fetch(`${API_URL}/auth/login`, getAuthOptions('POST', { email, password }));
 
+      console.log('ログインレスポンス:', {
+        status: response.status,
+        statusText: response.statusText
+      });
+
       if (!response.ok) {
         throw new Error(response.statusText || 'ログインに失敗しました');
       }
@@ -99,6 +111,11 @@ const authApi = {
   refreshToken: async (refreshToken: string) => {
     try {
       const response = await fetch(`${API_URL}/auth/refresh`, getAuthOptions('POST', { refresh_token: refreshToken }));
+
+      console.log('トークン更新レスポンス:', {
+        status: response.status,
+        statusText: response.statusText
+      });
 
       if (!response.ok) {
         throw new Error(response.statusText || 'トークンの更新に失敗しました');
@@ -126,6 +143,12 @@ const authApi = {
         credentials: 'include'
       });
 
+      console.log('ユーザー情報取得レスポンス:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: `${API_URL}/users/me`
+      });
+
       if (!response.ok) {
         throw new Error(`ユーザー情報の取得に失敗しました: ${response.status}`);
       }
@@ -143,6 +166,11 @@ const authApi = {
   getGoogleAuthUrl: async () => {
     try {
       const response = await fetch(`${API_URL}/auth/google/url`, getAuthOptions('GET'));
+
+      console.log('Google認証URL取得レスポンス:', {
+        status: response.status,
+        statusText: response.statusText
+      });
 
       if (!response.ok) {
         throw new Error('Google認証URLの取得に失敗しました');
@@ -162,6 +190,11 @@ const authApi = {
   googleCallback: async (code: string) => {
     try {
       const response = await fetch(`${API_URL}/auth/google/callback`, getAuthOptions('POST', { code }));
+
+      console.log('Google認証コールバックレスポンス:', {
+        status: response.status,
+        statusText: response.statusText
+      });
 
       if (!response.ok) {
         throw new Error('Google認証に失敗しました');
