@@ -1,4 +1,4 @@
-import { createContext, useState, useContext } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 import authApi from '../api/authApi';
 import { useNavigate } from 'react-router-dom';
 
@@ -174,6 +174,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   };
+
+  // 初回のみ認証チェックを実行
+  useEffect(() => {
+    const initialAuthCheck = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          return;
+        }
+        await checkAuth();
+      } catch (error) {
+        console.error('認証チェックエラー:', error);
+      }
+    };
+    initialAuthCheck();
+  }, []); // 依存配列を空にして初回のみ実行
 
   return (
     <AuthContext.Provider
