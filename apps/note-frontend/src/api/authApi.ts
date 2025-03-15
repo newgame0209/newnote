@@ -27,9 +27,7 @@ export const getAuthOptions = (method: string, body?: any): RequestInit => {
   
   const options: RequestInit = {
     method,
-    headers,
-    mode: 'cors',
-    credentials: 'include'
+    headers
   };
 
   if (body) {
@@ -50,18 +48,7 @@ const authApi = {
     try {
       console.log('登録開始:', { email, nickname });
       
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          nickname
-        })
-      });
+      const response = await fetch(`${API_URL}/auth/register`, getAuthOptions('POST', { email, password, nickname }));
 
       console.log('登録レスポンス:', {
         status: response.status,
@@ -70,8 +57,11 @@ const authApi = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'ユーザー登録に失敗しました');
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 409) {
+          throw new Error('このメールアドレスは既に登録されています');
+        }
+        throw new Error(errorData.error || 'ユーザー登録に失敗しました');
       }
 
       const data = await response.json();
@@ -79,7 +69,7 @@ const authApi = {
       return data;
     } catch (error: any) {
       console.error('登録エラー:', error);
-      throw new Error(error.message || 'ユーザー登録に失敗しました');
+      throw error;
     }
   },
 
@@ -90,17 +80,7 @@ const authApi = {
     try {
       console.log('ログイン開始:', { email });
       
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          email,
-          password
-        })
-      });
+      const response = await fetch(`${API_URL}/auth/login`, getAuthOptions('POST', { email, password }));
 
       console.log('ログインレスポンス:', {
         status: response.status,
@@ -109,8 +89,8 @@ const authApi = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'ログインに失敗しました');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'ログインに失敗しました');
       }
 
       const data = await response.json();
@@ -118,7 +98,7 @@ const authApi = {
       return data;
     } catch (error: any) {
       console.error('ログインエラー:', error);
-      throw new Error(error.message || 'ログインに失敗しました');
+      throw error;
     }
   },
 
@@ -129,13 +109,12 @@ const authApi = {
     try {
       console.log('ユーザー情報取得開始 - トークン:', token ? '存在します' : '存在しません');
       
-      const response = await fetch(`${API_URL}/auth/user`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      if (!token) {
+        throw new Error('認証トークンが存在しません');
+      }
+      
+      // 認証エンドポイントを修正
+      const response = await fetch(`${API_URL}/auth/user`, getAuthOptions('GET'));
 
       console.log('ユーザー情報取得レスポンス:', {
         status: response.status,
@@ -144,8 +123,8 @@ const authApi = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'ユーザー情報の取得に失敗しました');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'ユーザー情報の取得に失敗しました');
       }
 
       const data = await response.json();
@@ -153,24 +132,20 @@ const authApi = {
       return data;
     } catch (error: any) {
       console.error('ユーザー情報取得エラー:', error);
-      throw new Error(error.message || 'ユーザー情報の取得に失敗しました');
+      throw error;
     }
   },
 
   /**
-   * リフレッシュトークンの更新
+   * リフレッシュトークンを使用して新しいアクセストークンを取得
+   * @param refreshToken リフレッシュトークン
+   * @returns 新しいアクセストークンとリフレッシュトークン
    */
   async refreshToken(refreshToken: string) {
     try {
       console.log('トークン更新開始');
       
-      const response = await fetch(`${API_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`
-        }
-      });
+      const response = await fetch(`${API_URL}/auth/refresh`, getAuthOptions('POST'));
 
       console.log('トークン更新レスポンス:', {
         status: response.status,
@@ -179,8 +154,8 @@ const authApi = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'トークンの更新に失敗しました');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'トークンの更新に失敗しました');
       }
 
       const data = await response.json();
@@ -188,7 +163,38 @@ const authApi = {
       return data;
     } catch (error: any) {
       console.error('トークン更新エラー:', error);
-      throw new Error(error.message || 'トークンの更新に失敗しました');
+      throw error;
+    }
+  },
+
+  /**
+   * Google認証のコールバック処理
+   * @param code 認証コード
+   * @returns ユーザー情報とトークン
+   */
+  async googleCallback(code: string) {
+    try {
+      console.log('Google認証コールバック開始:', { code });
+      
+      const response = await fetch(`${API_URL}/auth/google/callback`, getAuthOptions('POST', { code }));
+
+      console.log('Google認証コールバックレスポンス:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Google認証に失敗しました');
+      }
+
+      const data = await response.json();
+      console.log('Google認証成功:', data);
+      return data;
+    } catch (error: any) {
+      console.error('Google認証エラー:', error);
+      throw error;
     }
   }
 };

@@ -56,7 +56,7 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const { notes, addNote, deleteNote, fetchNotes, loading: noteLoading, error: noteError } = useNotes();
   const { memos, addMemo, deleteMemo, fetchMemos, loading: memoLoading, error: memoError } = useMemos();
-  const { user, logout } = useAuth();
+  const { auth, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleAddNote = useCallback(async (noteData: CreateNoteData) => {
@@ -217,10 +217,15 @@ export default function Home() {
     </div>
   ), [handleMemoClick, handleMemoDeleteClick]);
 
+  const handleLogout = useCallback(() => {
+    logout();
+  }, [logout]);
+
   useEffect(() => {
     fetchNotes();
     fetchMemos();
-  }, []);
+    console.log('ユーザー情報:', auth.user);
+  }, [fetchNotes, fetchMemos, auth.user]);
 
   const deleteTarget = activeTab === 'note' ? noteToDelete : memoToDelete;
 
@@ -265,9 +270,9 @@ export default function Home() {
             />
           </h1>
           <div className="flex items-center space-x-3">
-            {user && (
+            {auth.user && (
               <div className="hidden sm:flex items-center mr-2">
-                <span className="text-white text-sm">{user.name || user.email}</span>
+                <span className="text-white text-sm">{auth.user.nickname || auth.user.email}</span>
               </div>
             )}
             <DropdownMenu>
@@ -279,12 +284,12 @@ export default function Home() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {user && (
+                {auth.user && (
                   <>
                     <DropdownMenuLabel>
                       <div className="flex items-center space-x-2">
                         <User className="w-4 h-4" />
-                        <span>{user.name || user.email}</span>
+                        <span>{auth.user.nickname || auth.user.email}</span>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
@@ -294,8 +299,8 @@ export default function Home() {
                   <Settings className="w-4 h-4 mr-2" />
                   <span>設定</span>
                 </DropdownMenuItem>
-                {user && (
-                  <DropdownMenuItem onClick={logout}>
+                {auth.user && (
+                  <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="w-4 h-4 mr-2" />
                     <span>ログアウト</span>
                   </DropdownMenuItem>
