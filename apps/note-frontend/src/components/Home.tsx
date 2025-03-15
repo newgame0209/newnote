@@ -267,7 +267,7 @@ export default function Home() {
           <div className="flex items-center space-x-3">
             {user && (
               <div className="hidden sm:flex items-center mr-2">
-                <span className="text-white text-sm">{user.nickname || user.email}</span>
+                <span className="text-white text-sm">{user.name || user.email}</span>
               </div>
             )}
             <DropdownMenu>
@@ -284,7 +284,7 @@ export default function Home() {
                     <DropdownMenuLabel>
                       <div className="flex items-center space-x-2">
                         <User className="w-4 h-4" />
-                        <span>{user.nickname || user.email}</span>
+                        <span>{user.name || user.email}</span>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />

@@ -11,9 +11,9 @@ import authApi from '@/api/authApi';
 
 // ユーザー情報の型定義
 interface User {
-  id: number;
+  id: string;
   email: string;
-  nickname: string;
+  name?: string;
 }
 
 // 認証コンテキストの型定義
@@ -24,8 +24,8 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, nickname: string) => Promise<void>;
-  logout: () => void;
+  register: (email: string, password: string, name?: string) => Promise<void>;
+  logout: () => Promise<void>;
   clearError: () => void;
   checkAuth: () => Promise<boolean>;
   googleLogin: () => Promise<void>;
@@ -45,7 +45,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [refreshToken, setRefreshToken] = useState<string | null>(localStorage.getItem('refreshToken'));
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -61,21 +61,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/users/me`, {
+      const response = await fetch(`${API_URL}/api/auth/user`, {
+        method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         },
+        credentials: 'include' as RequestCredentials,
+        mode: 'cors' as RequestMode
       });
+      
       if (!response.ok) {
-        throw new Error(response.statusText);
+        console.error('認証エラー:', response.status, response.statusText);
+        throw new Error(`認証エラー: ${response.status}`);
       }
+      
       const userData = await response.json();
       setUser(userData);
       return true;
     } catch (error: any) {
       console.error('認証確認に失敗しました', error);
       // トークンが無効な場合はログアウト
-      if (error instanceof Error && error.message.includes('401')) {
+      if (error instanceof Error && (error.message.includes('401') || error.message.includes('403'))) {
         logout();
       }
       return false;
@@ -104,7 +112,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         },
+        credentials: 'include' as RequestCredentials,
+        mode: 'cors' as RequestMode,
         body: JSON.stringify({ email, password }),
       });
       if (!response.ok) {
@@ -142,6 +153,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const response = await fetch(`${API_URL}/auth/google/url`, {
         method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'include' as RequestCredentials,
+        mode: 'cors' as RequestMode
       });
       if (!response.ok) {
         throw new Error(response.statusText);
@@ -170,7 +187,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         },
+        credentials: 'include' as RequestCredentials,
+        mode: 'cors' as RequestMode,
         body: JSON.stringify({ code }),
       });
       if (!response.ok) {
@@ -201,7 +221,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   /**
    * ユーザー登録処理
    */
-  const register = async (email: string, password: string, nickname: string) => {
+  const register = async (email: string, password: string, name?: string) => {
     setLoading(true);
     setError(null);
     
@@ -210,8 +230,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         },
-        body: JSON.stringify({ email, password, nickname }),
+        credentials: 'include' as RequestCredentials,
+        mode: 'cors' as RequestMode,
+        body: JSON.stringify({ email, password, name }),
       });
       if (!response.ok) {
         throw new Error(response.statusText);
@@ -232,7 +255,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   /**
    * ログアウト処理
    */
-  const logout = () => {
+  const logout = async () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     setToken(null);
