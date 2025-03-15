@@ -4,7 +4,7 @@
  * ログインしていないユーザーはログインページにリダイレクトされる
  */
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -13,18 +13,11 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated, loading, checkAuth } = useAuth();
+  const { auth } = useAuth();
   const location = useLocation();
 
-  useEffect(() => {
-    // ページロード時に認証状態を確認
-    if (!isAuthenticated && !loading) {
-      checkAuth();
-    }
-  }, [isAuthenticated, loading, checkAuth]);
-
   // ローディング中は何も表示しない
-  if (loading) {
+  if (auth.loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -33,7 +26,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   // 認証されていない場合はログインページにリダイレクト
-  if (!isAuthenticated) {
+  if (!auth.isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
