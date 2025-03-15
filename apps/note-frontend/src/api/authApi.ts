@@ -6,6 +6,11 @@
 // 認証APIのベースURL
 export const API_URL = import.meta.env.VITE_NOTE_API_URL || 'https://newnote-backend.onrender.com/api';
 
+// デバッグ用のログ関数
+const logDebug = (message: string, data?: any) => {
+  console.log(`[Auth API Debug] ${message}`, data || '');
+};
+
 // 認証APIのレスポンス型定義
 interface User {
   id: string;
@@ -29,6 +34,9 @@ const getAuthOptions = (method: string, body?: object): RequestInit => {
   
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+    logDebug('認証ヘッダーを追加しました', { token: token.substring(0, 10) + '...' });
+  } else {
+    logDebug('トークンが存在しません');
   }
   
   return {
@@ -40,34 +48,50 @@ const getAuthOptions = (method: string, body?: object): RequestInit => {
 
 // レスポンスをハンドルする関数
 const handleResponse = async (response: Response) => {
-  const data = await response.json();
+  logDebug(`APIレスポンス: ${response.status} ${response.statusText}`, {
+    url: response.url
+  });
 
-  if (!response.ok) {
-    // 認証エラーの場合、ローカルストレージをクリア
-    if (response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
+  try {
+    const data = await response.json();
+    logDebug('レスポンスボディ', data);
+
+    if (!response.ok) {
+      // 認証エラーの場合、ローカルストレージをクリア
+      if (response.status === 401) {
+        logDebug('認証エラー: トークンをクリア');
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+      }
+
+      if (response.status === 409) {
+        throw new Error('このメールアドレスは既に登録されています');
+      }
+
+      // APIからのエラーメッセージがあれば使用、なければデフォルトメッセージ
+      const errorMessage = data.message || 'エラーが発生しました';
+      throw new Error(errorMessage);
     }
 
-    if (response.status === 409) {
-      throw new Error('このメールアドレスは既に登録されています');
+    // トークンがレスポンスに含まれていれば保存
+    if (data.access_token) {
+      logDebug('アクセストークンを保存', { tokenPrefix: data.access_token.substring(0, 10) + '...' });
+      localStorage.setItem('token', data.access_token);
+    }
+    
+    if (data.refresh_token) {
+      logDebug('リフレッシュトークンを保存');
+      localStorage.setItem('refresh_token', data.refresh_token);
     }
 
-    // APIからのエラーメッセージがあれば使用、なければデフォルトメッセージ
-    const errorMessage = data.message || 'エラーが発生しました';
-    throw new Error(errorMessage);
+    return data;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      logDebug('JSONパースエラー', error);
+      throw new Error('サーバーからの応答を解析できませんでした');
+    }
+    throw error;
   }
-
-  // トークンがレスポンスに含まれていれば保存
-  if (data.access_token) {
-    localStorage.setItem('token', data.access_token);
-  }
-  
-  if (data.refresh_token) {
-    localStorage.setItem('refresh_token', data.refresh_token);
-  }
-
-  return data;
 };
 
 /**
@@ -78,6 +102,7 @@ const authApi = {
    * ユーザー登録
    */
   async register(email: string, password: string, nickname: string): Promise<AuthResponse> {
+    logDebug('ユーザー登録リクエスト', { email, nickname });
     const response = await fetch(`${API_URL}/auth/register`, getAuthOptions('POST', {
       email,
       password,
@@ -90,6 +115,7 @@ const authApi = {
    * ログイン
    */
   async login(email: string, password: string): Promise<AuthResponse> {
+    logDebug('ログインリクエスト', { email });
     const response = await fetch(`${API_URL}/auth/login`, getAuthOptions('POST', {
       email,
       password
@@ -101,6 +127,7 @@ const authApi = {
    * ログアウト
    */
   async logout(): Promise<void> {
+    logDebug('ログアウトリクエスト');
     const response = await fetch(`${API_URL}/auth/logout`, getAuthOptions('POST'));
     localStorage.removeItem('token');
     localStorage.removeItem('refresh_token');
@@ -111,6 +138,13 @@ const authApi = {
    * 認証状態の確認
    */
   async checkAuth(): Promise<AuthResponse> {
+    logDebug('認証状態確認リクエスト');
+    const token = localStorage.getItem('token');
+    if (!token) {
+      logDebug('トークンが存在しないため、認証状態の確認をスキップ');
+      throw new Error('認証情報がありません');
+    }
+    
     const response = await fetch(`${API_URL}/auth/me`, getAuthOptions('GET'));
     return handleResponse(response);
   },
@@ -121,6 +155,7 @@ const authApi = {
    * @returns 新しいアクセストークンとリフレッシュトークン
    */
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
+    logDebug('トークンリフレッシュリクエスト');
     const response = await fetch(`${API_URL}/auth/refresh`, getAuthOptions('POST', {
       refresh_token: refreshToken
     }));
@@ -131,8 +166,8 @@ const authApi = {
    * Google認証の開始
    */
   async googleLogin(): Promise<void> {
-    const response = await fetch(`${API_URL}/auth/google`, getAuthOptions('GET'));
-    return handleResponse(response);
+    logDebug('Google認証開始リクエスト');
+    window.location.href = `${API_URL}/auth/google`;
   },
 
   /**
@@ -141,6 +176,7 @@ const authApi = {
    * @returns ユーザー情報とトークン
    */
   async googleCallback(code: string): Promise<AuthResponse> {
+    logDebug('Googleコールバック処理リクエスト', { codePrefix: code.substring(0, 10) + '...' });
     const response = await fetch(`${API_URL}/auth/google/callback`, getAuthOptions('POST', {
       code
     }));
