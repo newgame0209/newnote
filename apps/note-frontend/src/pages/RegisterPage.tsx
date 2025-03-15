@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -15,14 +15,6 @@ const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [formError, setFormError] = useState('');
   const { register, googleLogin, auth } = useAuth();
-  const navigate = useNavigate();
-
-  // 認証済みの場合はホームページにリダイレクト
-  useEffect(() => {
-    if (auth.isAuthenticated) {
-      navigate('/');
-    }
-  }, [auth.isAuthenticated, navigate]);
 
   const validateForm = () => {
     // ニックネームの長さチェック
