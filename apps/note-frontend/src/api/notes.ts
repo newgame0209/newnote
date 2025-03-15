@@ -10,14 +10,16 @@ export const API_BASE_URL = import.meta.env.VITE_NOTE_API_URL || 'https://newnot
 const getAuthAxios = () => {
   const token = localStorage.getItem('token');
   
+  if (!token) {
+    throw new Error('認証情報がありません。再ログインしてください。');
+  }
+  
   return axios.create({
     baseURL: API_BASE_URL,
     headers: {
       'Content-Type': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    },
-    withCredentials: true // CORSリクエストでクッキーを送信
+      'Authorization': `Bearer ${token}`
+    }
   });
 };
 
@@ -46,8 +48,8 @@ export const fetchNote = async (id: string): Promise<Note> => {
     const response = await axiosInstance.get(`/api/notes/${id}`);
     return response.data;
   } catch (error) {
-    console.error(`Error fetching note ${id}:`, error);
-    throw new Error('ノートの取得中にエラーが発生しました');
+    console.error(`Error fetching note with id ${id}:`, error);
+    throw new Error(`ノートの取得中にエラーが発生しました (ID: ${id})`);
   }
 };
 
@@ -62,8 +64,8 @@ export const updateNote = async (id: string, data: Partial<CreateNoteData>): Pro
     const response = await axiosInstance.put(`/api/notes/${id}`, data);
     return response.data;
   } catch (error) {
-    console.error(`Error updating note ${id}:`, error);
-    throw new Error('ノートの更新中にエラーが発生しました');
+    console.error(`Error updating note with id ${id}:`, error);
+    throw new Error(`ノートの更新中にエラーが発生しました (ID: ${id})`);
   }
 };
 
@@ -76,8 +78,8 @@ export const deleteNote = async (id: string): Promise<void> => {
     const axiosInstance = getAuthAxios();
     await axiosInstance.delete(`/api/notes/${id}`);
   } catch (error) {
-    console.error(`Error deleting note ${id}:`, error);
-    throw new Error('ノートの削除中にエラーが発生しました');
+    console.error(`Error deleting note with id ${id}:`, error);
+    throw new Error(`ノートの削除中にエラーが発生しました (ID: ${id})`);
   }
 };
 
@@ -104,8 +106,8 @@ export const updatePage = async (noteId: string | number, pageNumber: number, co
     const response = await axiosInstance.put(`/api/notes/${noteId}/pages/${pageNumber}`, { content });
     return response.data;
   } catch (error) {
-    console.error(`Error updating page ${pageNumber} for note ${noteId}:`, error);
-    throw new Error('ページの保存中にエラーが発生しました');
+    console.error(`Error updating page ${pageNumber} of note ${noteId}:`, error);
+    throw new Error(`ページの保存中にエラーが発生しました (ノート: ${noteId}, ページ: ${pageNumber})`);
   }
 };
 
@@ -118,8 +120,8 @@ export const getPage = async (noteId: string | number, pageNumber: number): Prom
     const response = await axiosInstance.get(`/api/notes/${noteId}/pages/${pageNumber}`);
     return response.data;
   } catch (error) {
-    console.error(`Error getting page ${pageNumber} for note ${noteId}:`, error);
-    throw new Error('ページの取得中にエラーが発生しました');
+    console.error(`Error fetching page ${pageNumber} of note ${noteId}:`, error);
+    throw new Error(`ページの取得中にエラーが発生しました (ノート: ${noteId}, ページ: ${pageNumber})`);
   }
 };
 
@@ -133,10 +135,14 @@ export const getPage = async (noteId: string | number, pageNumber: number): Prom
 export const executeOCR = async (noteId: number, pageNumber: number, imageData: string): Promise<string> => {
   try {
     const axiosInstance = getAuthAxios();
-    const response = await axiosInstance.post(`/api/notes/${noteId}/pages/${pageNumber}/ocr`, { image_data: imageData });
+    const response = await axiosInstance.post(`/api/ocr`, {
+      note_id: noteId,
+      page_number: pageNumber,
+      image_data: imageData
+    });
     return response.data.text;
   } catch (error) {
-    console.error('Error executing OCR:', error);
+    console.error('OCR execution error:', error);
     throw new Error('OCR処理中にエラーが発生しました');
   }
 };
@@ -156,7 +162,7 @@ export const synthesizeSpeech = async (
   try {
     const axiosInstance = getAuthAxios();
     const response = await axiosInstance.post(
-      '/api/tts',
+      `/api/tts`,
       {
         text,
         voice_type: voiceType,
@@ -166,10 +172,9 @@ export const synthesizeSpeech = async (
         responseType: 'blob'
       }
     );
-    
     return response.data;
   } catch (error) {
-    console.error('Error synthesizing speech:', error);
+    console.error('Speech synthesis error:', error);
     throw new Error('音声合成中にエラーが発生しました');
   }
 };

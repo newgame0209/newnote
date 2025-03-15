@@ -4,7 +4,7 @@
  */
 
 // 認証APIのベースURL
-const API_URL = 'https://newnote-backend.onrender.com/api';
+export const API_URL = import.meta.env.VITE_NOTE_API_URL || 'https://newnote-backend.onrender.com/api';
 
 // 認証APIのレスポンス型定義
 interface User {
@@ -20,44 +20,49 @@ interface AuthResponse {
 }
 
 // 認証ヘッダー取得
-const getAuthOptions = (method: string, body?: object) => ({
-  method,
-  headers: {
-    'Content-Type': 'application/json',
-    ...(localStorage.getItem('token') ? {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
-    } : {})
-  },
-  body: body ? JSON.stringify(body) : undefined,
-  credentials: 'include' as const
-});
+const getAuthOptions = (method: string, body?: object): RequestInit => {
+  const token = localStorage.getItem('token');
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined
+  };
+};
 
 // レスポンスをハンドルする関数
 const handleResponse = async (response: Response) => {
   const data = await response.json();
-  
+
   if (!response.ok) {
-    // サーバーからのエラーメッセージを使用
-    if (data.message) {
-      throw new Error(data.message);
+    // 認証エラーの場合、ローカルストレージをクリア
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
     }
-    // ステータスコードに基づくデフォルトメッセージ
-    switch (response.status) {
-      case 400:
-        throw new Error('入力内容に誤りがあります');
-      case 401:
-        throw new Error('認証に失敗しました');
-      case 409:
-        throw new Error('このメールアドレスは既に登録されています');
-      default:
-        throw new Error('エラーが発生しました');
+
+    if (response.status === 409) {
+      throw new Error('このメールアドレスは既に登録されています');
     }
+
+    // APIからのエラーメッセージがあれば使用、なければデフォルトメッセージ
+    const errorMessage = data.message || 'エラーが発生しました';
+    throw new Error(errorMessage);
   }
 
-  // アクセストークンが返された場合は保存
+  // トークンがレスポンスに含まれていれば保存
   if (data.access_token) {
     localStorage.setItem('token', data.access_token);
   }
+  
   if (data.refresh_token) {
     localStorage.setItem('refresh_token', data.refresh_token);
   }
@@ -126,7 +131,8 @@ const authApi = {
    * Google認証の開始
    */
   async googleLogin(): Promise<void> {
-    window.location.href = `${API_URL}/auth/google`;
+    const response = await fetch(`${API_URL}/auth/google`, getAuthOptions('GET'));
+    return handleResponse(response);
   },
 
   /**
@@ -135,7 +141,9 @@ const authApi = {
    * @returns ユーザー情報とトークン
    */
   async googleCallback(code: string): Promise<AuthResponse> {
-    const response = await fetch(`${API_URL}/auth/google/callback?code=${code}`, getAuthOptions('GET'));
+    const response = await fetch(`${API_URL}/auth/google/callback`, getAuthOptions('POST', {
+      code
+    }));
     return handleResponse(response);
   }
 };

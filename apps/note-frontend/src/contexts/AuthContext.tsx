@@ -1,4 +1,4 @@
-import { createContext, useState, useContext } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 import authApi from '../api/authApi';
 import { useNavigate } from 'react-router-dom';
 
@@ -37,6 +37,33 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [auth, setAuth] = useState<AuthState>(defaultAuthState);
   const navigate = useNavigate();
+
+  // ページ読み込み時に認証状態を復元
+  useEffect(() => {
+    const restoreAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        setAuth(prev => ({ ...prev, loading: true }));
+        // トークンがある場合はユーザー情報を取得
+        const response = await authApi.checkAuth();
+        setAuth({
+          isAuthenticated: true,
+          user: response.user,
+          loading: false,
+          error: null
+        });
+      } catch (error) {
+        // トークンが無効な場合はローカルストレージをクリア
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+        setAuth(defaultAuthState);
+      }
+    };
+
+    restoreAuth();
+  }, []);
 
   const clearError = () => {
     setAuth(prev => ({ ...prev, error: null }));
