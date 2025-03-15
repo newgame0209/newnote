@@ -45,11 +45,9 @@ def create_app():
     CORS(app, 
          resources={
              r"/api/*": {
-                 "origins": ["https://mynote-psi-three.vercel.app", "http://localhost:3000"],
+                 "origins": ["https://mynote-psi-three.vercel.app", "http://localhost:5173"],
                  "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                 "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "*"],
-                 "expose_headers": ["Content-Type"],
-                 "max_age": 600,
+                 "allow_headers": ["Content-Type", "Authorization"],
                  "supports_credentials": True
              }
          })
@@ -57,9 +55,12 @@ def create_app():
     # CORS関連のエラーを解決するための追加設定
     @app.after_request
     def after_request(response):
-        response.headers.add('Access-Control-Allow-Origin', 'https://mynote-psi-three.vercel.app')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        origin = request.headers.get('Origin')
+        if origin in ["https://mynote-psi-three.vercel.app", "http://localhost:5173"]:
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response
 
     # ログ設定

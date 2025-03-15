@@ -28,7 +28,8 @@ const getAuthOptions = (method: string, body?: object) => ({
       'Authorization': `Bearer ${localStorage.getItem('token')}`
     } : {})
   },
-  body: body ? JSON.stringify(body) : undefined
+  body: body ? JSON.stringify(body) : undefined,
+  credentials: 'include' as const
 });
 
 // レスポンスをハンドルする関数
