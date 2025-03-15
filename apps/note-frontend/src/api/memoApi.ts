@@ -8,7 +8,7 @@ import { Memo, MemoPage, CreateMemoData, UpdateMemoData } from '@/types/memo';
 
 // 環境変数からAPIのURL取得、またはデフォルト値を使用
 // メモのバックエンドURLが異なる場合があるため、適切に設定
-const API_BASE_URL = import.meta.env.VITE_MEMO_API_URL || 'https://memo-backend-7va4.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_MEMO_API_URL || 'https://memo-backend-7va4.onrender.com/api';
 
 console.log('メモAPI設定:', {
   API_BASE_URL,
@@ -26,9 +26,9 @@ const getAuthOptions = (method: string, body?: any): RequestInit => {
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest',
     },
     mode: 'cors',
+    credentials: 'include'
   };
   
   // トークンがある場合は追加
@@ -56,21 +56,16 @@ const memoApi = {
    */
   getMemos: async (): Promise<Memo[]> => {
     try {
-      const url = `${API_BASE_URL}/api/memos`;
-      console.log(`メモ一覧取得 - URL: ${url}`);
-      
-      const response = await fetch(url, getAuthOptions('GET'));
+      const response = await fetch(`${API_BASE_URL}/memo/memos`, getAuthOptions('GET'));
       
       if (!response.ok) {
-        console.error('メモ一覧取得エラー:', response.status, response.statusText);
-        throw new Error(`メモ一覧の取得に失敗しました (${response.status})`);
+        throw new Error(response.statusText || 'メモ一覧の取得に失敗しました');
       }
       
       const data = await response.json();
-      console.log('メモ一覧取得成功:', data);
-      return data;
-    } catch (error) {
-      console.error('メモ一覧取得中のエラー:', error);
+      return data.memos || [];
+    } catch (error: any) {
+      console.error('メモ一覧取得エラー:', error);
       throw error;
     }
   },
@@ -80,27 +75,15 @@ const memoApi = {
    */
   createMemo: async (data: CreateMemoData): Promise<Memo> => {
     try {
-      console.log('メモ作成開始 - URL:', `${API_BASE_URL}/api/memos`);
-      
-      const body = {
-        title: data.title,
-        content: data.content || '',
-        main_category: data.mainCategory,
-        sub_category: data.subCategory
-      };
-      
-      const response = await fetch(`${API_BASE_URL}/api/memos`, getAuthOptions('POST', body));
+      const response = await fetch(`${API_BASE_URL}/memo/memos`, getAuthOptions('POST', data));
       
       if (!response.ok) {
-        console.error('メモ作成エラー:', response.status, response.statusText);
-        throw new Error(`メモの作成に失敗しました (${response.status})`);
+        throw new Error(response.statusText || 'メモの作成に失敗しました');
       }
       
-      const memo = await response.json();
-      console.log('メモ作成成功:', memo);
-      return memo;
-    } catch (error) {
-      console.error('メモ作成中のエラー:', error);
+      return await response.json();
+    } catch (error: any) {
+      console.error('メモ作成エラー:', error);
       throw error;
     }
   },
@@ -110,20 +93,15 @@ const memoApi = {
    */
   getMemo: async (id: number): Promise<Memo> => {
     try {
-      console.log('メモ取得開始 - URL:', `${API_BASE_URL}/api/memos/${id}`);
-      
-      const response = await fetch(`${API_BASE_URL}/api/memos/${id}`, getAuthOptions('GET'));
+      const response = await fetch(`${API_BASE_URL}/memo/memos/${id}`, getAuthOptions('GET'));
       
       if (!response.ok) {
-        console.error('メモ取得エラー:', response.status, response.statusText);
-        throw new Error(`メモの取得に失敗しました (${response.status})`);
+        throw new Error(response.statusText || 'メモの取得に失敗しました');
       }
       
-      const memo = await response.json();
-      console.log('メモ取得成功:', memo);
-      return memo;
-    } catch (error) {
-      console.error(`メモ(ID: ${id})の取得中のエラー:`, error);
+      return await response.json();
+    } catch (error: any) {
+      console.error(`メモ(ID: ${id})の取得エラー:`, error);
       throw error;
     }
   },
@@ -133,27 +111,15 @@ const memoApi = {
    */
   updateMemo: async (id: number, data: UpdateMemoData): Promise<Memo> => {
     try {
-      console.log('メモ更新開始 - URL:', `${API_BASE_URL}/api/memos/${id}`);
-      
-      const body = {
-        title: data.title,
-        content: data.content,
-        main_category: data.mainCategory,
-        sub_category: data.subCategory
-      };
-      
-      const response = await fetch(`${API_BASE_URL}/api/memos/${id}`, getAuthOptions('PUT', body));
+      const response = await fetch(`${API_BASE_URL}/memo/memos/${id}`, getAuthOptions('PUT', data));
       
       if (!response.ok) {
-        console.error('メモ更新エラー:', response.status, response.statusText);
-        throw new Error(`メモの更新に失敗しました (${response.status})`);
+        throw new Error(response.statusText || 'メモの更新に失敗しました');
       }
       
-      const memo = await response.json();
-      console.log('メモ更新成功:', memo);
-      return memo;
-    } catch (error) {
-      console.error(`メモ(ID: ${id})の更新中のエラー:`, error);
+      return await response.json();
+    } catch (error: any) {
+      console.error(`メモ(ID: ${id})の更新エラー:`, error);
       throw error;
     }
   },
@@ -163,18 +129,13 @@ const memoApi = {
    */
   deleteMemo: async (id: number): Promise<void> => {
     try {
-      console.log('メモ削除開始 - URL:', `${API_BASE_URL}/api/memos/${id}`);
-      
-      const response = await fetch(`${API_BASE_URL}/api/memos/${id}`, getAuthOptions('DELETE'));
+      const response = await fetch(`${API_BASE_URL}/memo/memos/${id}`, getAuthOptions('DELETE'));
       
       if (!response.ok) {
-        console.error('メモ削除エラー:', response.status, response.statusText);
-        throw new Error(`メモの削除に失敗しました (${response.status})`);
+        throw new Error(response.statusText || 'メモの削除に失敗しました');
       }
-      
-      console.log('メモ削除成功');
-    } catch (error) {
-      console.error(`メモ(ID: ${id})の削除中のエラー:`, error);
+    } catch (error: any) {
+      console.error(`メモ(ID: ${id})の削除エラー:`, error);
       throw error;
     }
   },
@@ -186,20 +147,16 @@ const memoApi = {
    */
   getMemoPages: async (id: number): Promise<MemoPage[]> => {
     try {
-      console.log('メモページ一覧取得開始 - URL:', `${API_BASE_URL}/api/memos/${id}/pages`);
-      
-      const response = await fetch(`${API_BASE_URL}/api/memos/${id}/pages`, getAuthOptions('GET'));
+      const response = await fetch(`${API_BASE_URL}/memo/memos/${id}/pages`, getAuthOptions('GET'));
       
       if (!response.ok) {
-        console.error('メモページ一覧取得エラー:', response.status, response.statusText);
-        throw new Error(`メモのページ一覧の取得に失敗しました (${response.status})`);
+        throw new Error(response.statusText || 'メモページの取得に失敗しました');
       }
       
-      const pages = await response.json();
-      console.log('メモページ一覧取得成功:', pages);
-      return pages;
-    } catch (error) {
-      console.error(`メモ(ID: ${id})のページ一覧取得中のエラー:`, error);
+      const data = await response.json();
+      return data.pages || [];
+    } catch (error: any) {
+      console.error(`メモ(ID: ${id})のページ一覧取得エラー:`, error);
       throw error;
     }
   },
@@ -212,20 +169,15 @@ const memoApi = {
    */
   getMemoPage: async (id: number, pageNumber: number): Promise<MemoPage> => {
     try {
-      console.log('メモページ取得開始 - URL:', `${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`);
-      
-      const response = await fetch(`${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`, getAuthOptions('GET'));
+      const response = await fetch(`${API_BASE_URL}/memo/memos/${id}/pages/${pageNumber}`, getAuthOptions('GET'));
       
       if (!response.ok) {
-        console.error('メモページ取得エラー:', response.status, response.statusText);
-        throw new Error(`メモのページの取得に失敗しました (${response.status})`);
+        throw new Error(response.statusText || 'メモページの取得に失敗しました');
       }
       
-      const page = await response.json();
-      console.log('メモページ取得成功:', page);
-      return page;
-    } catch (error) {
-      console.error(`メモ(ID: ${id})のページ(${pageNumber})取得中のエラー:`, error);
+      return await response.json();
+    } catch (error: any) {
+      console.error(`メモ(ID: ${id})のページ(${pageNumber})取得エラー:`, error);
       throw error;
     }
   },
@@ -238,22 +190,15 @@ const memoApi = {
    */
   addMemoPage: async (id: number, content: string = ''): Promise<MemoPage> => {
     try {
-      console.log('メモページ追加開始 - URL:', `${API_BASE_URL}/api/memos/${id}/pages`);
-      
-      const body = { content };
-      
-      const response = await fetch(`${API_BASE_URL}/api/memos/${id}/pages`, getAuthOptions('POST', body));
+      const response = await fetch(`${API_BASE_URL}/memo/memos/${id}/pages`, getAuthOptions('POST', { content }));
       
       if (!response.ok) {
-        console.error('メモページ追加エラー:', response.status, response.statusText);
-        throw new Error(`メモへの新規ページ追加に失敗しました (${response.status})`);
+        throw new Error(response.statusText || 'メモページの追加に失敗しました');
       }
       
-      const page = await response.json();
-      console.log('メモページ追加成功:', page);
-      return page;
-    } catch (error) {
-      console.error(`メモ(ID: ${id})への新規ページ追加中のエラー:`, error);
+      return await response.json();
+    } catch (error: any) {
+      console.error(`メモ(ID: ${id})のページ追加エラー:`, error);
       throw error;
     }
   },
@@ -267,22 +212,18 @@ const memoApi = {
    */
   updateMemoPage: async (id: number, pageNumber: number, content: string): Promise<MemoPage> => {
     try {
-      console.log('メモページ更新開始 - URL:', `${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`);
-      
-      const body = { content };
-      
-      const response = await fetch(`${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`, getAuthOptions('PUT', body));
+      const response = await fetch(
+        `${API_BASE_URL}/memo/memos/${id}/pages/${pageNumber}`,
+        getAuthOptions('PUT', { content })
+      );
       
       if (!response.ok) {
-        console.error('メモページ更新エラー:', response.status, response.statusText);
-        throw new Error(`メモのページの更新に失敗しました (${response.status})`);
+        throw new Error(response.statusText || 'メモページの更新に失敗しました');
       }
       
-      const page = await response.json();
-      console.log('メモページ更新成功:', page);
-      return page;
-    } catch (error) {
-      console.error(`メモ(ID: ${id})のページ(${pageNumber})更新中のエラー:`, error);
+      return await response.json();
+    } catch (error: any) {
+      console.error(`メモ(ID: ${id})のページ(${pageNumber})更新エラー:`, error);
       throw error;
     }
   },
@@ -295,18 +236,16 @@ const memoApi = {
    */
   deleteMemoPage: async (id: number, pageNumber: number): Promise<void> => {
     try {
-      console.log('メモページ削除開始 - URL:', `${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`);
-      
-      const response = await fetch(`${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`, getAuthOptions('DELETE'));
+      const response = await fetch(
+        `${API_BASE_URL}/memo/memos/${id}/pages/${pageNumber}`,
+        getAuthOptions('DELETE')
+      );
       
       if (!response.ok) {
-        console.error('メモページ削除エラー:', response.status, response.statusText);
-        throw new Error(`メモのページの削除に失敗しました (${response.status})`);
+        throw new Error(response.statusText || 'メモページの削除に失敗しました');
       }
-      
-      console.log('メモページ削除成功');
-    } catch (error) {
-      console.error(`メモ(ID: ${id})のページ(${pageNumber})削除中のエラー:`, error);
+    } catch (error: any) {
+      console.error(`メモ(ID: ${id})のページ(${pageNumber})削除エラー:`, error);
       throw error;
     }
   }

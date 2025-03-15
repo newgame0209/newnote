@@ -3,16 +3,53 @@
  * 認証関連のAPI通信を管理するモジュール
  */
 
-// APIのベースURL
-const API_URL = import.meta.env.VITE_API_URL || 'https://newnote-backend.onrender.com';
+// 認証APIのベースURL（環境変数を正しく使用）
+export const API_URL = import.meta.env.VITE_NOTE_API_URL || 'https://newnote-backend.onrender.com/api';
 
-// CORSオプションを設定（シンプル化）
-const defaultOptions: RequestInit = {
+console.log('認証API設定:', {
+  API_URL,
+  token: localStorage.getItem('token') ? '存在します' : '存在しません'
+});
+
+// CORS対応のオプション
+export const corsOptions = {
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
-  credentials: 'include' as RequestCredentials,
-  mode: 'cors' as RequestMode
+  mode: 'cors' as RequestMode,
+  credentials: 'include' as RequestCredentials
+};
+
+// 認証ヘッダー取得
+export const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+};
+
+// 認証リクエストオプション取得
+export const getAuthOptions = (method: string, body?: any): RequestInit => {
+  const options: RequestInit = {
+    method,
+    headers: getAuthHeaders(),
+    mode: 'cors',
+    credentials: 'include'
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  return options;
 };
 
 /**
@@ -21,130 +58,99 @@ const defaultOptions: RequestInit = {
 const authApi = {
   /**
    * ユーザー登録
-   * @param email メールアドレス
-   * @param password パスワード
-   * @param nickname ニックネーム
-   * @returns 登録結果
    */
   register: async (email: string, password: string, nickname: string) => {
     try {
       // fetchAPIを使用して直接リクエスト
-      const response = await fetch(`${API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password, nickname })
-      });
+      const response = await fetch(`${API_URL}/auth/register`, getAuthOptions('POST', { email, password, nickname }));
 
       if (!response.ok) {
         throw new Error(response.statusText || 'ユーザー登録に失敗しました');
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('登録エラー:', error);
       throw error;
     }
   },
 
   /**
-   * ログイン処理
-   * @param email メールアドレス
-   * @param password パスワード
-   * @returns ログイン結果
+   * ログイン
    */
   login: async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      });
+      const response = await fetch(`${API_URL}/auth/login`, getAuthOptions('POST', { email, password }));
 
       if (!response.ok) {
         throw new Error(response.statusText || 'ログインに失敗しました');
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('ログインエラー:', error);
       throw error;
     }
   },
 
   /**
-   * トークンのリフレッシュ
-   * @param refreshToken リフレッシュトークン
+   * リフレッシュトークンの更新
    */
   refreshToken: async (refreshToken: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`
-        }
-      });
+      const response = await fetch(`${API_URL}/auth/refresh`, getAuthOptions('POST', { refresh_token: refreshToken }));
 
       if (!response.ok) {
         throw new Error(response.statusText || 'トークンの更新に失敗しました');
       }
 
-      const data = await response.json();
-      return data.access_token;
-    } catch (error) {
-      console.error('トークンリフレッシュエラー:', error);
+      return await response.json();
+    } catch (error: any) {
+      console.error('トークン更新エラー:', error);
       throw error;
     }
   },
 
   /**
-   * ユーザー情報の取得
-   * @param token アクセストークン
+   * ユーザー情報取得
    */
   getUserInfo: async (token: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/user`, {
+      const headers = getAuthHeaders();
+      headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(`${API_URL}/users/me`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+        headers,
+        mode: 'cors',
+        credentials: 'include'
       });
 
       if (!response.ok) {
-        throw new Error(response.statusText || 'ユーザー情報の取得に失敗しました');
+        throw new Error(`ユーザー情報の取得に失敗しました: ${response.status}`);
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('ユーザー情報取得エラー:', error);
       throw error;
     }
   },
 
   /**
-   * Google認証URLの取得
+   * Google認証URL取得
    */
   getGoogleAuthUrl: async () => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/google`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await fetch(`${API_URL}/auth/google/url`, getAuthOptions('GET'));
 
       if (!response.ok) {
-        throw new Error(response.statusText || 'Google認証URLの取得に失敗しました');
+        throw new Error('Google認証URLの取得に失敗しました');
       }
 
       const data = await response.json();
-      return data.auth_url;
-    } catch (error) {
+      return data.url;
+    } catch (error: any) {
       console.error('Google認証URL取得エラー:', error);
       throw error;
     }
@@ -152,24 +158,17 @@ const authApi = {
 
   /**
    * Google認証コールバック処理
-   * @param code 認証コード
    */
   googleCallback: async (code: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/google/callback`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ code })
-      });
+      const response = await fetch(`${API_URL}/auth/google/callback`, getAuthOptions('POST', { code }));
 
       if (!response.ok) {
-        throw new Error(response.statusText || 'Google認証に失敗しました');
+        throw new Error('Google認証に失敗しました');
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Google認証コールバックエラー:', error);
       throw error;
     }
