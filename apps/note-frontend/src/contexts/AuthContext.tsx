@@ -171,7 +171,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ユーザー登録処理
   const register = async (email: string, password: string, nickname: string) => {
     try {
+      console.log('登録処理開始:', { email, nickname });
+      setAuth(prev => ({ ...prev, loading: true, error: null }));
+
       const response = await authApi.register(email, password, nickname);
+      console.log('登録成功:', response);
       
       // 登録成功後、自動的にログイン
       await login(email, password);
@@ -179,10 +183,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       navigate('/');
     } catch (error: any) {
       console.error('登録エラー:', error);
-      setAuth({
-        ...auth,
+      setAuth(prev => ({
+        ...prev,
+        loading: false,
         error: error.message || 'ユーザー登録に失敗しました'
-      });
+      }));
       throw error;
     }
   };
