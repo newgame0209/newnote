@@ -61,23 +61,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/auth/user`, {
+      
+      // 認証確認用のエンドポイント
+      const url = `${API_URL}/api/notes`;
+      console.log(`認証確認 - URL: ${url}`);
+      
+      const options: RequestInit = {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest'
+          'Accept': 'application/json',
         },
-        credentials: 'include' as RequestCredentials,
-        mode: 'cors' as RequestMode
-      });
+        mode: 'cors'
+      };
+      
+      const response = await fetch(url, options);
       
       if (!response.ok) {
         console.error('認証エラー:', response.status, response.statusText);
         throw new Error(`認証エラー: ${response.status}`);
       }
       
+      // 認証成功時、ユーザー情報を取得
       const userData = await response.json();
+      console.log('認証確認成功:', userData);
       setUser(userData);
       return true;
     } catch (error: any) {

@@ -10,23 +10,41 @@ import { Memo, MemoPage, CreateMemoData, UpdateMemoData } from '@/types/memo';
 // メモのバックエンドURLが異なる場合があるため、適切に設定
 const API_BASE_URL = import.meta.env.VITE_MEMO_API_URL || 'https://memo-backend-7va4.onrender.com';
 
+console.log('メモAPI設定:', {
+  API_BASE_URL,
+  token: localStorage.getItem('token') ? '存在します' : '存在しません'
+});
+
 /**
  * 認証情報付きのリクエストオプションを生成
  */
 const getAuthOptions = (method: string, body?: any): RequestInit => {
   const token = localStorage.getItem('token');
   
-  return {
+  const options: RequestInit = {
     method,
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       'X-Requested-With': 'XMLHttpRequest',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     },
-    credentials: 'include' as RequestCredentials, // 型を明示的に指定
-    mode: 'cors' as RequestMode,
-    ...(body ? { body: JSON.stringify(body) } : {})
+    mode: 'cors',
   };
+  
+  // トークンがある場合は追加
+  if (token) {
+    options.headers = {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`
+    };
+  }
+  
+  // bodyがある場合は追加
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+  
+  return options;
 };
 
 /**
@@ -38,9 +56,10 @@ const memoApi = {
    */
   getMemos: async (): Promise<Memo[]> => {
     try {
-      console.log('メモ一覧取得開始 - URL:', `${API_BASE_URL}/memos`);
+      const url = `${API_BASE_URL}/api/memos`;
+      console.log(`メモ一覧取得 - URL: ${url}`);
       
-      const response = await fetch(`${API_BASE_URL}/memos`, getAuthOptions('GET'));
+      const response = await fetch(url, getAuthOptions('GET'));
       
       if (!response.ok) {
         console.error('メモ一覧取得エラー:', response.status, response.statusText);
@@ -61,7 +80,7 @@ const memoApi = {
    */
   createMemo: async (data: CreateMemoData): Promise<Memo> => {
     try {
-      console.log('メモ作成開始 - URL:', `${API_BASE_URL}/api/memo/memos`);
+      console.log('メモ作成開始 - URL:', `${API_BASE_URL}/api/memos`);
       
       const body = {
         title: data.title,
@@ -70,7 +89,7 @@ const memoApi = {
         sub_category: data.subCategory
       };
       
-      const response = await fetch(`${API_BASE_URL}/api/memo/memos`, getAuthOptions('POST', body));
+      const response = await fetch(`${API_BASE_URL}/api/memos`, getAuthOptions('POST', body));
       
       if (!response.ok) {
         console.error('メモ作成エラー:', response.status, response.statusText);
@@ -91,9 +110,9 @@ const memoApi = {
    */
   getMemo: async (id: number): Promise<Memo> => {
     try {
-      console.log('メモ取得開始 - URL:', `${API_BASE_URL}/api/memo/memos/${id}`);
+      console.log('メモ取得開始 - URL:', `${API_BASE_URL}/api/memos/${id}`);
       
-      const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}`, getAuthOptions('GET'));
+      const response = await fetch(`${API_BASE_URL}/api/memos/${id}`, getAuthOptions('GET'));
       
       if (!response.ok) {
         console.error('メモ取得エラー:', response.status, response.statusText);
@@ -114,7 +133,7 @@ const memoApi = {
    */
   updateMemo: async (id: number, data: UpdateMemoData): Promise<Memo> => {
     try {
-      console.log('メモ更新開始 - URL:', `${API_BASE_URL}/api/memo/memos/${id}`);
+      console.log('メモ更新開始 - URL:', `${API_BASE_URL}/api/memos/${id}`);
       
       const body = {
         title: data.title,
@@ -123,7 +142,7 @@ const memoApi = {
         sub_category: data.subCategory
       };
       
-      const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}`, getAuthOptions('PUT', body));
+      const response = await fetch(`${API_BASE_URL}/api/memos/${id}`, getAuthOptions('PUT', body));
       
       if (!response.ok) {
         console.error('メモ更新エラー:', response.status, response.statusText);
@@ -144,9 +163,9 @@ const memoApi = {
    */
   deleteMemo: async (id: number): Promise<void> => {
     try {
-      console.log('メモ削除開始 - URL:', `${API_BASE_URL}/api/memo/memos/${id}`);
+      console.log('メモ削除開始 - URL:', `${API_BASE_URL}/api/memos/${id}`);
       
-      const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}`, getAuthOptions('DELETE'));
+      const response = await fetch(`${API_BASE_URL}/api/memos/${id}`, getAuthOptions('DELETE'));
       
       if (!response.ok) {
         console.error('メモ削除エラー:', response.status, response.statusText);
@@ -167,9 +186,9 @@ const memoApi = {
    */
   getMemoPages: async (id: number): Promise<MemoPage[]> => {
     try {
-      console.log('メモページ一覧取得開始 - URL:', `${API_BASE_URL}/api/memo/memos/${id}/pages`);
+      console.log('メモページ一覧取得開始 - URL:', `${API_BASE_URL}/api/memos/${id}/pages`);
       
-      const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}/pages`, getAuthOptions('GET'));
+      const response = await fetch(`${API_BASE_URL}/api/memos/${id}/pages`, getAuthOptions('GET'));
       
       if (!response.ok) {
         console.error('メモページ一覧取得エラー:', response.status, response.statusText);
@@ -193,9 +212,9 @@ const memoApi = {
    */
   getMemoPage: async (id: number, pageNumber: number): Promise<MemoPage> => {
     try {
-      console.log('メモページ取得開始 - URL:', `${API_BASE_URL}/api/memo/memos/${id}/pages/${pageNumber}`);
+      console.log('メモページ取得開始 - URL:', `${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`);
       
-      const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}/pages/${pageNumber}`, getAuthOptions('GET'));
+      const response = await fetch(`${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`, getAuthOptions('GET'));
       
       if (!response.ok) {
         console.error('メモページ取得エラー:', response.status, response.statusText);
@@ -219,11 +238,11 @@ const memoApi = {
    */
   addMemoPage: async (id: number, content: string = ''): Promise<MemoPage> => {
     try {
-      console.log('メモページ追加開始 - URL:', `${API_BASE_URL}/api/memo/memos/${id}/pages`);
+      console.log('メモページ追加開始 - URL:', `${API_BASE_URL}/api/memos/${id}/pages`);
       
       const body = { content };
       
-      const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}/pages`, getAuthOptions('POST', body));
+      const response = await fetch(`${API_BASE_URL}/api/memos/${id}/pages`, getAuthOptions('POST', body));
       
       if (!response.ok) {
         console.error('メモページ追加エラー:', response.status, response.statusText);
@@ -248,11 +267,11 @@ const memoApi = {
    */
   updateMemoPage: async (id: number, pageNumber: number, content: string): Promise<MemoPage> => {
     try {
-      console.log('メモページ更新開始 - URL:', `${API_BASE_URL}/api/memo/memos/${id}/pages/${pageNumber}`);
+      console.log('メモページ更新開始 - URL:', `${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`);
       
       const body = { content };
       
-      const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}/pages/${pageNumber}`, getAuthOptions('PUT', body));
+      const response = await fetch(`${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`, getAuthOptions('PUT', body));
       
       if (!response.ok) {
         console.error('メモページ更新エラー:', response.status, response.statusText);
@@ -276,9 +295,9 @@ const memoApi = {
    */
   deleteMemoPage: async (id: number, pageNumber: number): Promise<void> => {
     try {
-      console.log('メモページ削除開始 - URL:', `${API_BASE_URL}/api/memo/memos/${id}/pages/${pageNumber}`);
+      console.log('メモページ削除開始 - URL:', `${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`);
       
-      const response = await fetch(`${API_BASE_URL}/api/memo/memos/${id}/pages/${pageNumber}`, getAuthOptions('DELETE'));
+      const response = await fetch(`${API_BASE_URL}/api/memos/${id}/pages/${pageNumber}`, getAuthOptions('DELETE'));
       
       if (!response.ok) {
         console.error('メモページ削除エラー:', response.status, response.statusText);
