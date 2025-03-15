@@ -4,7 +4,7 @@
  */
 
 // 認証APIのベースURL
-const API_URL = import.meta.env.VITE_NOTE_API_URL || 'https://newnote-backend.onrender.com/api';
+const API_URL = 'https://newnote-backend.onrender.com/api';
 
 // 認証APIのレスポンス型定義
 interface User {
@@ -28,8 +28,7 @@ const getAuthOptions = (method: string, body?: object) => ({
       'Authorization': `Bearer ${localStorage.getItem('token')}`
     } : {})
   },
-  body: body ? JSON.stringify(body) : undefined,
-  credentials: 'include' as const
+  body: body ? JSON.stringify(body) : undefined
 });
 
 // レスポンスをハンドルする関数
