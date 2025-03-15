@@ -1,6 +1,6 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useState, useContext } from 'react';
 import authApi from '../api/authApi';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 // ユーザー型定義
 interface User {
@@ -33,7 +33,7 @@ interface AuthContextType {
 const defaultAuthState: AuthState = {
   isAuthenticated: false,
   user: null,
-  loading: true,
+  loading: false,
   error: null
 };
 
@@ -44,207 +44,150 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [auth, setAuth] = useState<AuthState>(defaultAuthState);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // 認証状態のチェック
-  const checkAuth = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setAuth({
-          ...defaultAuthState,
-          loading: false
-        });
-        return false;
-      }
-
-      const userData = await authApi.getUserInfo(token);
-      setAuth({
-        isAuthenticated: true,
-        user: userData,
-        loading: false,
-        error: null
-      });
-      return true;
-    } catch (error: any) {
-      console.error('認証チェックエラー:', error);
-      
-      // トークンが無効な場合はログアウト
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
-      
-      setAuth({
-        ...defaultAuthState,
-        loading: false,
-        error: error.message || '認証チェックに失敗しました'
-      });
-      return false;
-    }
-  };
-
-  // 初期認証チェック
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  // ログイン処理
-  const login = async (email: string, password: string) => {
-    try {
-      setAuth(prev => ({ ...prev, loading: true, error: null }));
-      
-      const data = await authApi.login(email, password);
-      
-      if (!data || !data.access_token) {
-        throw new Error('ログインレスポンスが不正です');
-      }
-      
-      localStorage.setItem('token', data.access_token);
-      if (data.refresh_token) {
-        localStorage.setItem('refresh_token', data.refresh_token);
-      }
-
-      // ユーザー情報がレスポンスに含まれている場合はそれを使用
-      if (data.user) {
-        setAuth({
-          isAuthenticated: true,
-          user: data.user,
-          loading: false,
-          error: null
-        });
-        
-        // ログイン前のページがあればそこに戻る、なければホームへ
-        const from = location.state?.from?.pathname || '/';
-        navigate(from);
-        return;
-      }
-      
-      // ユーザー情報が含まれていない場合は別途取得
-      try {
-        const userData = await authApi.getUserInfo(data.access_token);
-        setAuth({
-          isAuthenticated: true,
-          user: userData,
-          loading: false,
-          error: null
-        });
-        
-        // ログイン前のページがあればそこに戻る、なければホームへ
-        const from = location.state?.from?.pathname || '/';
-        navigate(from);
-      } catch (userError: any) {
-        console.error('ユーザー情報取得エラー:', userError);
-        // ユーザー情報取得に失敗してもログイン自体は成功しているのでホームへ
-        setAuth({
-          isAuthenticated: true,
-          user: null,
-          loading: false,
-          error: null
-        });
-        navigate('/');
-      }
-    } catch (error: any) {
-      console.error('ログインエラー:', error);
-      setAuth(prev => ({
-        ...prev,
-        loading: false,
-        error: error.message || 'ログインに失敗しました'
-      }));
-      throw error;
-    }
-  };
-
-  // ログアウト処理
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refresh_token');
-    setAuth({
-      ...defaultAuthState,
-      loading: false
-    });
-    navigate('/login');
-  };
-
-  // ユーザー登録処理
-  const register = async (email: string, password: string, nickname: string) => {
-    try {
-      console.log('登録処理開始:', { email, nickname });
-      setAuth(prev => ({ ...prev, loading: true, error: null }));
-
-      const response = await authApi.register(email, password, nickname);
-      console.log('登録成功:', response);
-      
-      // 登録成功後、自動的にログイン
-      await login(email, password);
-    } catch (error: any) {
-      console.error('登録エラー:', error);
-      setAuth(prev => ({
-        ...prev,
-        loading: false,
-        error: error.message || 'ユーザー登録に失敗しました'
-      }));
-      throw error;
-    }
-  };
-
-  // Google認証によるログイン
-  const googleLogin = async () => {
-    try {
-      // Google認証ページへリダイレクト
-      window.location.href = `${import.meta.env.VITE_NOTE_API_URL || 'https://newnote-backend.onrender.com/api'}/auth/google`;
-    } catch (error: any) {
-      console.error('Google認証エラー:', error);
-      setAuth({
-        ...auth,
-        error: error.message || 'Google認証に失敗しました'
-      });
-      throw error;
-    }
-  };
-
-  // Googleコールバック処理
-  const googleCallback = async (code: string) => {
-    try {
-      const data = await authApi.googleCallback(code);
-      
-      localStorage.setItem('token', data.access_token);
-      if (data.refresh_token) {
-        localStorage.setItem('refresh_token', data.refresh_token);
-      }
-
-      setAuth({
-        isAuthenticated: true,
-        user: data.user,
-        loading: false,
-        error: null
-      });
-
-      navigate('/');
-    } catch (error: any) {
-      console.error('Googleコールバックエラー:', error);
-      setAuth({
-        ...auth,
-        error: error.message || 'Google認証に失敗しました'
-      });
-      throw error;
-    }
-  };
-
-  // エラーのクリア
   const clearError = () => {
     setAuth(prev => ({ ...prev, error: null }));
   };
 
+  const setLoading = (loading: boolean) => {
+    setAuth(prev => ({ ...prev, loading }));
+  };
+
+  const setError = (error: string) => {
+    setAuth(prev => ({ ...prev, error }));
+  };
+
+  const login = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      clearError();
+      const response = await authApi.login(email, password);
+      setAuth(prev => ({
+        ...prev,
+        isAuthenticated: true,
+        user: response.user
+      }));
+      navigate('/');
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('ログインに失敗しました');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (email: string, password: string, nickname: string) => {
+    try {
+      setLoading(true);
+      clearError();
+      const response = await authApi.register(email, password, nickname);
+      setAuth(prev => ({
+        ...prev,
+        isAuthenticated: true,
+        user: response.user
+      }));
+      navigate('/');
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('登録に失敗しました');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      setLoading(true);
+      clearError();
+      await authApi.logout();
+      setAuth(defaultAuthState);
+      navigate('/login');
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('ログアウトに失敗しました');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkAuth = async () => {
+    try {
+      setLoading(true);
+      clearError();
+      const response = await authApi.checkAuth();
+      setAuth(prev => ({
+        ...prev,
+        isAuthenticated: true,
+        user: response.user
+      }));
+      return true;
+    } catch (error) {
+      setAuth(defaultAuthState);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const googleLogin = async () => {
+    try {
+      setLoading(true);
+      clearError();
+      await authApi.googleLogin();
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Google認証に失敗しました');
+      }
+      setLoading(false);
+    }
+  };
+
+  const googleCallback = async (code: string) => {
+    try {
+      setLoading(true);
+      clearError();
+      const response = await authApi.googleCallback(code);
+      setAuth(prev => ({
+        ...prev,
+        isAuthenticated: true,
+        user: response.user
+      }));
+      navigate('/');
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Google認証に失敗しました');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{
-      auth,
-      login,
-      logout,
-      register,
-      checkAuth,
-      googleLogin,
-      googleCallback,
-      clearError
-    }}>
+    <AuthContext.Provider
+      value={{
+        auth,
+        login,
+        logout,
+        register,
+        checkAuth,
+        googleLogin,
+        googleCallback,
+        clearError
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

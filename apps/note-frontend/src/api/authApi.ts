@@ -4,37 +4,65 @@
  */
 
 // 認証APIのベースURL
-export const API_URL = import.meta.env.VITE_NOTE_API_URL || 'https://newnote-backend.onrender.com/api';
+const API_URL = import.meta.env.VITE_NOTE_API_URL || 'https://newnote-backend.onrender.com/api';
+
+// 認証APIのレスポンス型定義
+interface User {
+  id: string;
+  email: string;
+  nickname: string;
+}
+
+interface AuthResponse {
+  user: User;
+  access_token: string;
+  refresh_token?: string;
+}
 
 // 認証ヘッダー取得
-export const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  const headers: HeadersInit = {
+const getAuthOptions = (method: string, body?: object) => ({
+  method,
+  headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
+    ...(localStorage.getItem('token') ? {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    } : {})
+  },
+  body: body ? JSON.stringify(body) : undefined,
+  credentials: 'include' as const
+});
+
+// レスポンスをハンドルする関数
+const handleResponse = async (response: Response) => {
+  const data = await response.json();
   
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (!response.ok) {
+    // サーバーからのエラーメッセージを使用
+    if (data.message) {
+      throw new Error(data.message);
+    }
+    // ステータスコードに基づくデフォルトメッセージ
+    switch (response.status) {
+      case 400:
+        throw new Error('入力内容に誤りがあります');
+      case 401:
+        throw new Error('認証に失敗しました');
+      case 409:
+        throw new Error('このメールアドレスは既に登録されています');
+      default:
+        throw new Error('エラーが発生しました');
+    }
   }
-  
-  return headers;
-};
 
-// 認証リクエストオプション取得
-export const getAuthOptions = (method: string, body?: any): RequestInit => {
-  const headers = getAuthHeaders();
-  
-  const options: RequestInit = {
-    method,
-    headers
-  };
-
-  if (body) {
-    options.body = JSON.stringify(body);
+  // アクセストークンが返された場合は保存
+  if (data.access_token) {
+    localStorage.setItem('token', data.access_token);
+  }
+  if (data.refresh_token) {
+    localStorage.setItem('refresh_token', data.refresh_token);
   }
 
-  return options;
+  return data;
 };
 
 /**
@@ -44,96 +72,42 @@ const authApi = {
   /**
    * ユーザー登録
    */
-  async register(email: string, password: string, nickname: string) {
-    try {
-      console.log('登録開始:', { email, nickname });
-      
-      const response = await fetch(`${API_URL}/auth/register`, getAuthOptions('POST', { email, password, nickname }));
-
-      console.log('登録レスポンス:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        if (response.status === 409) {
-          throw new Error('このメールアドレスは既に登録されています');
-        }
-        throw new Error(errorData.error || 'ユーザー登録に失敗しました');
-      }
-
-      const data = await response.json();
-      console.log('登録成功:', data);
-      return data;
-    } catch (error: any) {
-      console.error('登録エラー:', error);
-      throw error;
-    }
+  async register(email: string, password: string, nickname: string): Promise<AuthResponse> {
+    const response = await fetch(`${API_URL}/auth/register`, getAuthOptions('POST', {
+      email,
+      password,
+      nickname
+    }));
+    return handleResponse(response);
   },
 
   /**
    * ログイン
    */
-  async login(email: string, password: string) {
-    try {
-      console.log('ログイン開始:', { email });
-      
-      const response = await fetch(`${API_URL}/auth/login`, getAuthOptions('POST', { email, password }));
-
-      console.log('ログインレスポンス:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'ログインに失敗しました');
-      }
-
-      const data = await response.json();
-      console.log('ログイン成功:', data);
-      return data;
-    } catch (error: any) {
-      console.error('ログインエラー:', error);
-      throw error;
-    }
+  async login(email: string, password: string): Promise<AuthResponse> {
+    const response = await fetch(`${API_URL}/auth/login`, getAuthOptions('POST', {
+      email,
+      password
+    }));
+    return handleResponse(response);
   },
 
   /**
-   * ユーザー情報取得
+   * ログアウト
    */
-  async getUserInfo(token: string) {
-    try {
-      console.log('ユーザー情報取得開始 - トークン:', token ? '存在します' : '存在しません');
-      
-      if (!token) {
-        throw new Error('認証トークンが存在しません');
-      }
-      
-      // 認証エンドポイントを修正
-      const response = await fetch(`${API_URL}/auth/user`, getAuthOptions('GET'));
+  async logout(): Promise<void> {
+    const response = await fetch(`${API_URL}/auth/logout`, getAuthOptions('POST'));
+    localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+    return handleResponse(response);
+  },
 
-      console.log('ユーザー情報取得レスポンス:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'ユーザー情報の取得に失敗しました');
-      }
-
-      const data = await response.json();
-      console.log('ユーザー情報取得成功:', data);
-      return data;
-    } catch (error: any) {
-      console.error('ユーザー情報取得エラー:', error);
-      throw error;
-    }
+  /**
+   * 認証状態の確認
+   */
+  async checkAuth(): Promise<AuthResponse> {
+    const response = await fetch(`${API_URL}/auth/me`, getAuthOptions('GET'));
+    return handleResponse(response);
   },
 
   /**
@@ -141,30 +115,18 @@ const authApi = {
    * @param refreshToken リフレッシュトークン
    * @returns 新しいアクセストークンとリフレッシュトークン
    */
-  async refreshToken(refreshToken: string) {
-    try {
-      console.log('トークン更新開始');
-      
-      const response = await fetch(`${API_URL}/auth/refresh`, getAuthOptions('POST'));
+  async refreshToken(refreshToken: string): Promise<AuthResponse> {
+    const response = await fetch(`${API_URL}/auth/refresh`, getAuthOptions('POST', {
+      refresh_token: refreshToken
+    }));
+    return handleResponse(response);
+  },
 
-      console.log('トークン更新レスポンス:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'トークンの更新に失敗しました');
-      }
-
-      const data = await response.json();
-      console.log('トークン更新成功:', data);
-      return data;
-    } catch (error: any) {
-      console.error('トークン更新エラー:', error);
-      throw error;
-    }
+  /**
+   * Google認証の開始
+   */
+  async googleLogin(): Promise<void> {
+    window.location.href = `${API_URL}/auth/google`;
   },
 
   /**
@@ -172,30 +134,9 @@ const authApi = {
    * @param code 認証コード
    * @returns ユーザー情報とトークン
    */
-  async googleCallback(code: string) {
-    try {
-      console.log('Google認証コールバック開始:', { code });
-      
-      const response = await fetch(`${API_URL}/auth/google/callback`, getAuthOptions('POST', { code }));
-
-      console.log('Google認証コールバックレスポンス:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Google認証に失敗しました');
-      }
-
-      const data = await response.json();
-      console.log('Google認証成功:', data);
-      return data;
-    } catch (error: any) {
-      console.error('Google認証エラー:', error);
-      throw error;
-    }
+  async googleCallback(code: string): Promise<AuthResponse> {
+    const response = await fetch(`${API_URL}/auth/google/callback?code=${code}`, getAuthOptions('GET'));
+    return handleResponse(response);
   }
 };
 
