@@ -51,3 +51,7 @@ backend/logs/
 *.swo
 .DS_Store
 Thumbs.db
+
+# ログファイル
+*.log
+logs/
