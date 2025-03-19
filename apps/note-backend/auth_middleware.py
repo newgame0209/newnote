@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import request, jsonify
 import logging
-from firebase_admin import verify_firebase_token
+from firebase_service import verify_firebase_token
 
 logger = logging.getLogger(__name__)
 
