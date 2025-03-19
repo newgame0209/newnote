@@ -34,12 +34,30 @@ def create_app():
     # CORSエラー対策のための追加設定
     @app.after_request
     def after_request(response):
+        # プリフライトリクエストの場合は200 OKを返す
+        if request.method == 'OPTIONS':
+            headers = {
+                'Access-Control-Allow-Origin': request.headers.get('Origin', '*'),
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+                'Access-Control-Max-Age': '600',
+                'Access-Control-Allow-Credentials': 'true'
+            }
+            return app.response_class(status=200, headers=headers)
+        
+        # 通常のリクエストの場合
         origin = request.headers.get('Origin')
         if origin and origin in allowed_origins_list:
             response.headers.add('Access-Control-Allow-Origin', origin)
             response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
             response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response
+
+    # グローバルOPTIONSハンドラ - 全てのAPIパスに対応
+    @app.route('/api/<path:path>', methods=['OPTIONS'])
+    def handle_options(path):
+        return '', 200
 
     # データベースの初期化
     init_db()
@@ -53,12 +71,6 @@ def create_app():
     @app.route('/health')
     def health_check():
         return {'status': 'ok'}, 200
-
-    # OPTIONSリクエストのハンドリング
-    @app.route('/api/memo/memos/list', methods=['OPTIONS'])
-    def handle_options_memos_list():
-        response = app.make_default_options_response()
-        return response
 
     @app.errorhandler(500)
     def handle_500_error(error):
