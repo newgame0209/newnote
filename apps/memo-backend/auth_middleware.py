@@ -3,6 +3,8 @@ from flask import request, jsonify
 import logging
 import firebase_admin
 from firebase_admin import credentials, auth
+import os
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -10,11 +12,22 @@ logger = logging.getLogger(__name__)
 try:
     default_app = firebase_admin.get_app()
 except ValueError:
-    # Firebase Adminが初期化されていない場合、初期化する
-    import os
-    cred_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'amiable-hour-446600-s5-accc791c2e4d.json')
-    cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred)
+    # Firebase Adminが初期化されていない場合、環境変数から認証情報を取得
+    firebase_creds_json = os.getenv('FIREBASE_SERVICE_ACCOUNT_KEY')
+    
+    if firebase_creds_json:
+        try:
+            # JSONとして解析
+            cred_dict = json.loads(firebase_creds_json)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+            logger.info("Firebase Admin SDKを環境変数から初期化しました")
+        except Exception as e:
+            logger.error(f"Firebase認証情報の初期化に失敗しました: {str(e)}")
+            raise
+    else:
+        logger.error("FIREBASE_SERVICE_ACCOUNT_KEY環境変数が設定されていません")
+        raise ValueError("Firebase認証情報が見つかりません")
 
 def extract_token_from_request():
     """

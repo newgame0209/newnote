@@ -23,10 +23,6 @@ def create_app():
          allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"],
          supports_credentials=True)
 
-    # Google Cloud認証情報のパスを設定
-    credentials_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'amiable-hour-446600-s5-accc791c2e4d.json')
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
-
     # データベースの初期化
     init_db()
 
