@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from routes.memo import memo_bp
 from database import init_db, shutdown_session
@@ -16,12 +16,30 @@ def create_app():
     # デバッグモードを環境変数から設定
     app.debug = os.getenv('DEBUG', 'false').lower() == 'true'
 
-    # CORSの設定 - シンプルな単一設定に変更
+    # 許可するオリジンのリスト（環境変数から取得またはデフォルト値）
+    allowed_origins = os.getenv('CORS_ORIGINS', 'https://mynote-psi-three.vercel.app,http://localhost:3000')
+    allowed_origins_list = [origin.strip() for origin in allowed_origins.split(',')]
+    
+    # CORSの設定
     CORS(app, 
-         origins=["https://mynote-psi-three.vercel.app", "http://localhost:3000"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"],
-         supports_credentials=True)
+         resources={r"/api/*": {
+             "origins": allowed_origins_list,
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "*"],
+             "expose_headers": ["Content-Type"],
+             "max_age": 600,
+             "supports_credentials": True
+         }})
+    
+    # CORSエラー対策のための追加設定
+    @app.after_request
+    def after_request(response):
+        origin = request.headers.get('Origin')
+        if origin and origin in allowed_origins_list:
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
 
     # データベースの初期化
     init_db()
@@ -36,7 +54,11 @@ def create_app():
     def health_check():
         return {'status': 'ok'}, 200
 
-    # OPTIONSリクエストは flask-cors が自動処理するので個別に実装する必要はない
+    # OPTIONSリクエストのハンドリング
+    @app.route('/api/memo/memos/list', methods=['OPTIONS'])
+    def handle_options_memos_list():
+        response = app.make_default_options_response()
+        return response
 
     @app.errorhandler(500)
     def handle_500_error(error):
