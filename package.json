@@ -1,0 +1,13 @@
+{
+  "name": "newnote",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start:note-frontend": "cd apps/note-frontend && npm run dev",
+    "start:note-backend": "cd apps/note-backend && python app.py",
+    "start:memo-frontend": "cd apps/memo-frontend && npm run dev",
+    "start:memo-backend": "cd apps/memo-backend && python app.py",
+    "install:all": "cd apps/note-frontend && npm install && cd ../memo-frontend && npm install",
+    "build:all": "cd apps/note-frontend && npm run build && cd ../memo-frontend && npm run build"
+  }
+}
