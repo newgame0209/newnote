@@ -303,10 +303,11 @@ export default function Home() {
             </button>
             <button
               onClick={handleLogout}
-              className="text-white hover:text-gray-200 transition-colors flex items-center"
+              className="text-white hover:text-gray-200 transition-colors flex items-center gap-1"
               title="ログアウト"
             >
               <LogOut className="w-6 h-6" />
+              <span className="text-sm">ログアウト</span>
             </button>
           </div>
         </div>

@@ -595,9 +595,9 @@ const MemoEditor = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-2 flex justify-center">
+      <div className="container mx-auto px-4 flex justify-center">
         {/* ページ切り替えナビゲーション */}
-        <div className="flex items-center justify-center bg-white rounded-lg shadow-md px-2 py-1.5 sm:px-3 sm:py-2 mt-2 max-w-fit mx-auto">
+        <div className="flex items-center justify-center bg-white rounded-lg shadow-md px-2 py-1.5 sm:px-3 sm:py-2 -mt-3 max-w-fit mx-auto">
           <button 
             onClick={() => handlePageChange(currentPageIndex - 1)}
             disabled={currentPageIndex === 1}
