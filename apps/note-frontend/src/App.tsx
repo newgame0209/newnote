@@ -15,6 +15,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import { ToastContainer } from './components/ui/toast';
 
 function App() {
   return (
@@ -22,30 +23,32 @@ function App() {
       <SettingsProvider>
         <NoteProvider>
           <MemoProvider>
-            <Router>
-              <Routes>
-                {/* 認証ページ */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                
-                {/* 認証が必要なページ */}
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <Home />
-                  </ProtectedRoute>
-                } />
-                <Route path="/edit/:noteId" element={
-                  <ProtectedRoute>
-                    <NoteEditor />
-                  </ProtectedRoute>
-                } />
-                <Route path="/memo/edit/:memoId" element={
-                  <ProtectedRoute>
-                    <MemoEditor />
-                  </ProtectedRoute>
-                } />
-              </Routes>
-            </Router>
+            <ToastContainer>
+              <Router>
+                <Routes>
+                  {/* 認証ページ */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  
+                  {/* 認証が必要なページ */}
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <Home />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/edit/:noteId" element={
+                    <ProtectedRoute>
+                      <NoteEditor />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/memo/edit/:memoId" element={
+                    <ProtectedRoute>
+                      <MemoEditor />
+                    </ProtectedRoute>
+                  } />
+                </Routes>
+              </Router>
+            </ToastContainer>
           </MemoProvider>
         </NoteProvider>
       </SettingsProvider>

@@ -14,6 +14,7 @@ import { Memo, CreateMemoData } from "@/types/memo";
 import { getDisplayCategory } from '@/types/categories';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 interface Note {
   id: string;
@@ -50,6 +51,7 @@ export default function Home() {
   const { memos, addMemo, deleteMemo, fetchMemos, loading: memoLoading, error: memoError } = useMemos();
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const handleAddNote = useCallback(async (noteData: CreateNoteData) => {
     try {
@@ -250,6 +252,30 @@ export default function Home() {
     }
   };
 
+  // 初回表示時のようこそメッセージ
+  React.useEffect(() => {
+    // localStorageを使って、すでにメッセージを表示したかどうかを確認
+    const hasShownWelcome = localStorage.getItem('hasShownWelcome');
+    
+    if (!hasShownWelcome && currentUser) {
+      const userName = currentUser.displayName || ''; 
+      const welcomeMessage = userName ? 
+        `ようこそ、${userName}さん！ノートやメモを作成してみましょう` : 
+        'ようこそ！ノートやメモを作成してみましょう';
+        
+      // 少し遅延させてトーストを表示（ページのロードが完了してから）
+      setTimeout(() => {
+        toast.show(welcomeMessage, { 
+          variant: 'info',
+          duration: 5000 
+        });
+      }, 1000);
+      
+      // 表示済みとしてマーク
+      localStorage.setItem('hasShownWelcome', 'true');
+    }
+  }, [currentUser, toast]);
+
   return (
     <div className="min-h-full">
       <header className="bg-[#232B3A] shadow">
@@ -266,6 +292,9 @@ export default function Home() {
             />
           </h1>
           <div className="flex items-center space-x-4">
+            {currentUser?.displayName && (
+              <span className="text-white">こんにちは、{currentUser.displayName}さん</span>
+            )}
             <button
               onClick={() => setIsSettingsOpen(true)}
               className="text-white hover:text-gray-200 transition-colors"

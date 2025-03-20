@@ -7,7 +7,8 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
-  User
+  User,
+  updateProfile
 } from 'firebase/auth';
 import { initializeApp } from 'firebase/app';
 
@@ -30,11 +31,12 @@ const auth = getAuth(app);
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  register: (email: string, password: string) => Promise<User>;
+  register: (email: string, password: string, displayName?: string) => Promise<User>;
   login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<User>;
   getIdToken: () => Promise<string | null>;
+  updateUserProfile: (displayName: string) => Promise<void>;
 }
 
 // コンテキストの作成
@@ -46,9 +48,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   // 新規ユーザー登録
-  const register = async (email: string, password: string): Promise<User> => {
+  const register = async (email: string, password: string, displayName?: string): Promise<User> => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // ユーザー名を設定（指定があれば）
+    if (displayName) {
+      await updateProfile(result.user, { displayName });
+    }
+    
     return result.user;
+  };
+
+  // ユーザープロファイルの更新
+  const updateUserProfile = async (displayName: string): Promise<void> => {
+    if (!currentUser) throw new Error('ユーザーがログインしていません');
+    await updateProfile(currentUser, { displayName });
+    // プロファイル更新後に最新のユーザー情報を取得するため再ロード
+    setCurrentUser({ ...currentUser, displayName });
   };
 
   // ログイン
@@ -92,7 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     loginWithGoogle,
-    getIdToken
+    getIdToken,
+    updateUserProfile
   };
 
   return (
