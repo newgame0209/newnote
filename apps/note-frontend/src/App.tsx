@@ -16,6 +16,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { ToastContainer } from './components/ui/toast';
+import NoteViewerTest from './components/test/NoteViewerTest';
 
 function App() {
   return (
@@ -46,6 +47,9 @@ function App() {
                       <MemoEditor />
                     </ProtectedRoute>
                   } />
+                  
+                  {/* テストページ - 認証不要 */}
+                  <Route path="/test-viewer" element={<NoteViewerTest />} />
                 </Routes>
               </Router>
             </ToastContainer>
