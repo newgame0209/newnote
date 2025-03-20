@@ -36,17 +36,19 @@ const getSubCategories = (mainCategory: string) => {
         { value: "report", label: "レポート" },
         { value: "strategy", label: "戦略企画" },
         { value: "brainstorming", label: "アイデア/ブレスト" },
-        { value: "memo", label: "業務連絡とメモ" },
+        { value: "memo_info", label: "メモと情報収集" },
       ];
     case "study":
       return [
         { value: "math", label: "数学" },
         { value: "physics", label: "物理" },
-        { value: "science", label: "科学" },
         { value: "english", label: "英語" },
-        { value: "history", label: "歴史" },
-        { value: "literature", label: "文学" },
+        { value: "social", label: "社会" },
+        { value: "japanese", label: "国語" },
         { value: "exam", label: "試験対策" },
+        { value: "marketing", label: "マーケティング" },
+        { value: "programming", label: "プログラミング" },
+        { value: "business", label: "起業とビジネス" },
       ];
     case "personal":
       return [
@@ -54,6 +56,7 @@ const getSubCategories = (mainCategory: string) => {
         { value: "hobby", label: "趣味" },
         { value: "travel", label: "旅行" },
         { value: "shopping", label: "家計簿/買い物リスト" },
+        { value: "sidework", label: "副業" },
       ];
     default:
       return [];
