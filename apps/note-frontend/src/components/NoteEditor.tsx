@@ -111,6 +111,25 @@ export function NoteEditor() {
         selectable: false, // オブジェクトの選択を初期状態で無効化
       });
 
+      // iPadでApple Pencilのみを受け付けるための処理
+      canvas.on('mouse:down', function(opt) {
+        const evt = opt.e;
+        // pointerTypeが'pen'（Apple Pencilなど）でない場合、かつ描画モードでツールがペン/マーカー/消しゴムの場合はキャンセル
+        if (canvas.isDrawingMode && 
+            currentTool !== 'view' && 
+            evt.pointerType && 
+            evt.pointerType !== 'pen') {
+          // イベントをキャンセル
+          evt.preventDefault();
+          // デフォルトの描画処理を防止
+          canvas.__onMouseDown = function() {};
+          return false;
+        } else {
+          // 通常処理を続行
+          return true;
+        }
+      });
+
       canvas.on('after:render', () => {
         console.log('キャンバス再描画完了');
       });
@@ -344,10 +363,26 @@ export function NoteEditor() {
         obj.hoverCursor = 'default';
       });
       document.body.style.overflow = 'auto';
+      
+      // 視覚モードでは全てのポインターイベントを許可
+      canvas.off('mouse:down');
     } else {
       // 描画モードの場合
       canvas.isDrawingMode = true;
       document.body.style.overflow = 'hidden';
+      
+      // Apple Pencilのみを許可する処理を設定
+      canvas.off('mouse:down'); // 既存のイベントハンドラをクリア
+      canvas.on('mouse:down', function(opt) {
+        const evt = opt.e;
+        // pointerTypeが'pen'（Apple Pencilなど）でない場合は描画をキャンセル
+        if (evt.pointerType && evt.pointerType !== 'pen') {
+          // イベントをキャンセル
+          evt.preventDefault();
+          // デフォルトの描画処理を防止
+          return false;
+        }
+      });
       
       switch (currentTool) {
         case 'pen':
@@ -883,7 +918,11 @@ export function NoteEditor() {
           <canvas 
             ref={canvasRef}
             className="absolute inset-0 w-full h-full"
-            style={{ touchAction: 'none' }}
+            style={{ 
+              touchAction: currentTool === 'view' ? 'pan-x pan-y' : 'none',
+              // iPad向けのポインター設定
+              WebkitTouchCallout: 'none'
+            }}
           />
           
           {/* しおり一覧サイドパネル（スマホ・タブレット対応） */}
