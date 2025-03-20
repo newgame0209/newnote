@@ -23,7 +23,7 @@ const MemoEditor = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
-  const { addMemo, getMemo, updateMemo, addMemoPage, updateMemoPage, getMemoPages } = useMemos();
+  const { addMemo, getMemo, updateMemo, addMemoPage, updateMemoPage, getMemoPages, getMemoPage } = useMemos();
   const { memoId } = useParams();
   const navigate = useNavigate();
   // 設定情報の取得
@@ -250,10 +250,19 @@ const MemoEditor = () => {
       // 音声タイプとスピード設定を取得
       const speakingRate = getSpeakingRateValue();
       
+      // 認証トークンを取得（Firebase Auth）
+      const auth = (await import('firebase/auth')).getAuth();
+      const token = await auth.currentUser?.getIdToken(true);
+      
+      if (!token) {
+        throw new Error('認証情報が取得できません。再ログインしてください。');
+      }
+      
       const response = await fetch(`${import.meta.env.VITE_NOTE_API_URL}/tts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
           text: textToSpeak,
@@ -269,7 +278,9 @@ const MemoEditor = () => {
       });
 
       if (!response.ok) {
-        throw new Error('音声変換に失敗しました');
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error(`音声変換エラー: ステータス ${response.status}, レスポンス:`, errorText);
+        throw new Error(`音声変換に失敗しました (${response.status})`);
       }
 
       const blob = await response.blob();
@@ -304,7 +315,7 @@ const MemoEditor = () => {
       await audio.play();
     } catch (error) {
       console.error('音声変換エラー:', error);
-      alert('音声変換に失敗しました');
+      alert(error instanceof Error ? error.message : '音声変換に失敗しました');
     } finally {
       setIsConverting(false);
     }
@@ -464,10 +475,33 @@ const MemoEditor = () => {
             try {
               await updateMemoPage(Number(memoId), currentPageIndex, content);
               console.log(`ページ ${currentPageIndex} の内容を保存しました`);
+              
+              // ページの切り替え後にAPIから最新のデータを取得する
+              const newPageArrayIndex = index - 1;
+              if (newPageArrayIndex >= 0 && newPageArrayIndex < updatedPages.length) {
+                try {
+                  // APIから最新のページデータを取得
+                  const latestPage = await getMemoPage(Number(memoId), index);
+                  if (latestPage) {
+                    // 最新のページデータで更新
+                    updatedPages[newPageArrayIndex] = latestPage;
+                    setPages(updatedPages);
+                    
+                    // ページの切り替えを実行
+                    setCurrentPageIndex(index);
+                    setContent(latestPage.content || '');
+                    return; // 成功したら早期リターン
+                  }
+                } catch (fetchError) {
+                  console.error('最新ページデータの取得に失敗:', fetchError);
+                  // エラー時は通常のフロー続行（下記のコード）
+                }
+              }
             } catch (error) {
               console.error('ページ内容の更新に失敗しました:', error);
             }
           })();
+          return; // 非同期処理を開始したので関数を終了
         }
       }
       
