@@ -637,7 +637,7 @@ const MemoEditor = () => {
         </div>
       </div>
       
-      <main className="container mx-auto px-4 pb-6">
+      <main className="container mx-auto px-4 pb-6 pt-6">
         <textarea
           ref={textareaRef}
           value={content}
