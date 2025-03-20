@@ -807,7 +807,7 @@ export function NoteEditor() {
               key={tool}
               onClick={() => setCurrentTool(tool)}
               className={cn(
-                "p-2.5 rounded-md transition-colors md:p-3",
+                "px-2.5 py-1.5 rounded-md transition-colors md:px-3 md:py-2",
                 currentTool === tool
                   ? "bg-[#232B3A] text-white"
                   : "text-gray-700 hover:bg-gray-100"
@@ -823,7 +823,7 @@ export function NoteEditor() {
             onClick={undoOperation}
             disabled={!canUndoOperation}
             className={cn(
-              "p-2.5 rounded-md transition-colors md:p-3",
+              "px-2.5 py-1.5 rounded-md transition-colors md:px-3 md:py-2",
               !canUndoOperation
                 ? "text-gray-300 cursor-not-allowed"
                 : "text-gray-700 hover:bg-gray-100"
@@ -838,9 +838,9 @@ export function NoteEditor() {
           <button
             onClick={() => setShowBookmarks(!showBookmarks)}
             className={cn(
-              "p-2.5 rounded-md transition-colors flex items-center",
+              "px-2.5 py-1.5 rounded-md transition-colors flex items-center",
               showBookmarks ? "bg-[#232B3A] text-white" : "text-gray-700 hover:bg-gray-100",
-              "md:p-3" // タブレット・PC向けに大きく
+              "md:px-3 md:py-2" // タブレット・PC向けに調整
             )}
             aria-label="しおり一覧"
             title="しおり一覧"
@@ -852,13 +852,13 @@ export function NoteEditor() {
             onClick={addBookmark}
             disabled={isAddingBookmark || bookmarks.some(b => b.page_number === currentPage)}
             className={cn(
-              "p-2.5 rounded-md transition-colors flex items-center",
+              "px-2.5 py-1.5 rounded-md transition-colors flex items-center",
               bookmarks.some(b => b.page_number === currentPage) 
                 ? "bg-blue-100 text-blue-600" 
                 : isAddingBookmark 
                   ? "opacity-50 cursor-not-allowed text-gray-700" 
                   : "text-gray-700 hover:bg-gray-100",
-              "md:p-3" // タブレット・PC向けに大きく
+              "md:px-3 md:py-2" // タブレット・PC向けに調整
             )}
             aria-label="現在のページをしおりに追加"
             title="現在のページをしおりに追加"
