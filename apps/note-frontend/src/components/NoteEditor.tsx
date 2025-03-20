@@ -111,25 +111,6 @@ export function NoteEditor() {
         selectable: false, // オブジェクトの選択を初期状態で無効化
       });
 
-      // iPadでApple Pencilのみを受け付けるための処理
-      canvas.on('mouse:down', function(opt) {
-        const evt = opt.e;
-        // pointerTypeが'pen'（Apple Pencilなど）でない場合、かつ描画モードでツールがペン/マーカー/消しゴムの場合はキャンセル
-        if (canvas.isDrawingMode && 
-            currentTool !== 'view' && 
-            evt.pointerType && 
-            evt.pointerType !== 'pen') {
-          // イベントをキャンセル
-          evt.preventDefault();
-          // デフォルトの描画処理を防止
-          canvas.__onMouseDown = function() {};
-          return false;
-        } else {
-          // 通常処理を続行
-          return true;
-        }
-      });
-
       canvas.on('after:render', () => {
         console.log('キャンバス再描画完了');
       });
@@ -363,26 +344,10 @@ export function NoteEditor() {
         obj.hoverCursor = 'default';
       });
       document.body.style.overflow = 'auto';
-      
-      // 視覚モードでは全てのポインターイベントを許可
-      canvas.off('mouse:down');
     } else {
       // 描画モードの場合
       canvas.isDrawingMode = true;
       document.body.style.overflow = 'hidden';
-      
-      // Apple Pencilのみを許可する処理を設定
-      canvas.off('mouse:down'); // 既存のイベントハンドラをクリア
-      canvas.on('mouse:down', function(opt) {
-        const evt = opt.e;
-        // pointerTypeが'pen'（Apple Pencilなど）でない場合は描画をキャンセル
-        if (evt.pointerType && evt.pointerType !== 'pen') {
-          // イベントをキャンセル
-          evt.preventDefault();
-          // デフォルトの描画処理を防止
-          return false;
-        }
-      });
       
       switch (currentTool) {
         case 'pen':
@@ -842,23 +807,23 @@ export function NoteEditor() {
               key={tool}
               onClick={() => setCurrentTool(tool)}
               className={cn(
-                "p-2 rounded-md transition-colors",
+                "p-2.5 rounded-md transition-colors md:p-3",
                 currentTool === tool
                   ? "bg-[#232B3A] text-white"
                   : "text-gray-700 hover:bg-gray-100"
               )}
             >
-              {tool === 'pen' && <Pen className="w-4 h-4" />}
-              {tool === 'eraser' && <Eraser className="w-4 h-4" />}
-              {tool === 'marker' && <Highlighter className="w-4 h-4" />}
-              {tool === 'view' && <Eye className="w-4 h-4" />}
+              {tool === 'pen' && <Pen className="w-5 h-5 md:w-6 md:h-6" />}
+              {tool === 'eraser' && <Eraser className="w-5 h-5 md:w-6 md:h-6" />}
+              {tool === 'marker' && <Highlighter className="w-5 h-5 md:w-6 md:h-6" />}
+              {tool === 'view' && <Eye className="w-5 h-5 md:w-6 md:h-6" />}
             </button>
           ))}
           <button
             onClick={undoOperation}
             disabled={!canUndoOperation}
             className={cn(
-              "p-2 rounded-md transition-colors",
+              "p-2.5 rounded-md transition-colors md:p-3",
               !canUndoOperation
                 ? "text-gray-300 cursor-not-allowed"
                 : "text-gray-700 hover:bg-gray-100"
@@ -866,38 +831,40 @@ export function NoteEditor() {
             aria-label="操作を元に戻す"
             title="操作を元に戻す"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-5 h-5 md:w-6 md:h-6" />
           </button>
         </div>
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setShowBookmarks(!showBookmarks)}
             className={cn(
-              "p-2 rounded-md transition-colors flex items-center",
-              showBookmarks ? "bg-[#232B3A] text-white" : "text-gray-700 hover:bg-gray-100"
+              "p-2.5 rounded-md transition-colors flex items-center",
+              showBookmarks ? "bg-[#232B3A] text-white" : "text-gray-700 hover:bg-gray-100",
+              "md:p-3" // タブレット・PC向けに大きく
             )}
             aria-label="しおり一覧"
             title="しおり一覧"
           >
-            <Bookmark className="w-4 h-4 mr-1" />
-            <span className="text-xs">しおり</span>
+            <Bookmark className="w-5 h-5 mr-1.5 md:w-6 md:h-6" />
+            <span className="text-sm md:text-base font-medium">しおり</span>
           </button>
           <button
             onClick={addBookmark}
             disabled={isAddingBookmark || bookmarks.some(b => b.page_number === currentPage)}
             className={cn(
-              "p-2 rounded-md transition-colors flex items-center",
+              "p-2.5 rounded-md transition-colors flex items-center",
               bookmarks.some(b => b.page_number === currentPage) 
                 ? "bg-blue-100 text-blue-600" 
                 : isAddingBookmark 
                   ? "opacity-50 cursor-not-allowed text-gray-700" 
-                  : "text-gray-700 hover:bg-gray-100"
+                  : "text-gray-700 hover:bg-gray-100",
+              "md:p-3" // タブレット・PC向けに大きく
             )}
             aria-label="現在のページをしおりに追加"
             title="現在のページをしおりに追加"
           >
-            <BookmarkPlus className="w-4 h-4 mr-1" />
-            <span className="text-xs">追加</span>
+            <BookmarkPlus className="w-5 h-5 mr-1.5 md:w-6 md:h-6" />
+            <span className="text-sm md:text-base font-medium">追加</span>
           </button>
         </div>
       </div>
@@ -918,11 +885,7 @@ export function NoteEditor() {
           <canvas 
             ref={canvasRef}
             className="absolute inset-0 w-full h-full"
-            style={{ 
-              touchAction: currentTool === 'view' ? 'pan-x pan-y' : 'none',
-              // iPad向けのポインター設定
-              WebkitTouchCallout: 'none'
-            }}
+            style={{ touchAction: 'none' }}
           />
           
           {/* しおり一覧サイドパネル（スマホ・タブレット対応） */}
