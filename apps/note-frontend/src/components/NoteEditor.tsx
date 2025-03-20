@@ -834,19 +834,20 @@ export function NoteEditor() {
             <RotateCcw className="w-5 h-5 md:w-6 md:h-6" />
           </button>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 max-sm:flex-col max-sm:items-end max-sm:pr-1">
           <button
             onClick={() => setShowBookmarks(!showBookmarks)}
             className={cn(
               "px-2.5 py-1.5 rounded-md transition-colors flex items-center",
               showBookmarks ? "bg-[#232B3A] text-white" : "text-gray-700 hover:bg-gray-100",
-              "md:px-3 md:py-2" // タブレット・PC向けに調整
+              "md:px-3 md:py-2", // タブレット・PC向けに調整
+              "max-sm:py-1 max-sm:mb-0.5 max-sm:h-[1.6rem]", // スマホ向けに高さ調整
             )}
             aria-label="しおり一覧"
             title="しおり一覧"
           >
-            <Bookmark className="w-5 h-5 mr-1.5 md:w-6 md:h-6" />
-            <span className="text-sm md:text-base font-medium">しおり</span>
+            <Bookmark className="w-5 h-5 mr-1 md:mr-1.5 md:w-6 md:h-6 max-sm:w-4 max-sm:h-4" />
+            <span className="text-sm md:text-base font-medium max-sm:text-xs">しおり</span>
           </button>
           <button
             onClick={addBookmark}
@@ -858,13 +859,14 @@ export function NoteEditor() {
                 : isAddingBookmark 
                   ? "opacity-50 cursor-not-allowed text-gray-700" 
                   : "text-gray-700 hover:bg-gray-100",
-              "md:px-3 md:py-2" // タブレット・PC向けに調整
+              "md:px-3 md:py-2", // タブレット・PC向けに調整
+              "max-sm:py-1 max-sm:h-[1.6rem] max-sm:min-w-[4rem]", // スマホ向けに高さ調整
             )}
             aria-label="現在のページをしおりに追加"
             title="現在のページをしおりに追加"
           >
-            <BookmarkPlus className="w-5 h-5 mr-1.5 md:w-6 md:h-6" />
-            <span className="text-sm md:text-base font-medium">追加</span>
+            <BookmarkPlus className="w-5 h-5 mr-1 md:mr-1.5 md:w-6 md:h-6 max-sm:w-4 max-sm:h-4" />
+            <span className="text-sm md:text-base font-medium max-sm:text-xs">追加</span>
           </button>
         </div>
       </div>

@@ -291,9 +291,9 @@ export default function Home() {
               delay={0.1}
             />
           </h1>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 max-sm:ml-4">
             {currentUser?.displayName && (
-              <span className="text-white">こんにちは、{currentUser.displayName}さん</span>
+              <span className="text-white max-sm:text-sm">こんにちは、{currentUser.displayName}さん</span>
             )}
             <button
               onClick={() => setIsSettingsOpen(true)}
@@ -303,11 +303,10 @@ export default function Home() {
             </button>
             <button
               onClick={handleLogout}
-              className="text-white hover:text-gray-200 transition-colors flex items-center gap-1"
+              className="text-white hover:text-gray-200 transition-colors flex items-center"
               title="ログアウト"
             >
               <LogOut className="w-6 h-6" />
-              <span className="hidden sm:inline">ログアウト</span>
             </button>
           </div>
         </div>
