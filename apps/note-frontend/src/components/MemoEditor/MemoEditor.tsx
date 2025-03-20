@@ -597,18 +597,18 @@ const MemoEditor = () => {
 
       <div className="container mx-auto px-4 py-2 flex justify-center">
         {/* ページ切り替えナビゲーション */}
-        <div className="flex items-center justify-center bg-white rounded-lg shadow-md px-3 py-2 sm:px-4 sm:py-3 mt-2 max-w-fit mx-auto">
+        <div className="flex items-center justify-center bg-white rounded-lg shadow-md px-2 py-1.5 sm:px-3 sm:py-2 mt-2 max-w-fit mx-auto">
           <button 
             onClick={() => handlePageChange(currentPageIndex - 1)}
             disabled={currentPageIndex === 1}
-            className="p-2 sm:p-3 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             aria-label="前のページ"
           >
-            <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600" />
+            <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
           </button>
           
-          <div className="flex flex-col items-center mx-3 sm:mx-4">
-            <span className="text-base sm:text-lg font-medium text-gray-600">
+          <div className="flex flex-col items-center mx-2 sm:mx-3">
+            <span className="text-sm sm:text-base font-medium text-gray-600">
               {currentPageIndex} / {totalPages}
             </span>
             <span className="text-xs text-gray-400">ページ</span>
@@ -617,21 +617,21 @@ const MemoEditor = () => {
           <button 
             onClick={() => handlePageChange(currentPageIndex + 1)}
             disabled={currentPageIndex >= totalPages}
-            className="p-2 sm:p-3 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             aria-label="次のページ"
           >
-            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600" />
+            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
           </button>
           
-          <div className="pl-2 sm:pl-4 ml-1 sm:ml-2 border-l border-gray-200">
+          <div className="pl-1.5 sm:pl-3 ml-0.5 sm:ml-1 border-l border-gray-200">
             <button
               onClick={handleAddPage}
               disabled={totalPages >= 10}
-              className="p-2 sm:p-2.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-30 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              className="p-1.5 sm:p-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-30 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
               title={totalPages >= 10 ? "最大ページ数に達しました" : "新規ページを追加"}
               aria-label="ページ追加"
             >
-              <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
         </div>
