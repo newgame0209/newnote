@@ -751,8 +751,8 @@ export function NoteEditor() {
   }, [noteId, fetchNotes]);
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="bg-[#232B3A] text-white">
+    <div className="min-h-screen bg-white flex flex-col">
+      <header className="bg-[#232B3A] text-white z-10">
         <div className="mx-auto px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -800,7 +800,7 @@ export function NoteEditor() {
       </header>
 
       {/* ツールバー */}
-      <div className="h-12 px-4 flex items-center justify-between bg-white border-b">
+      <div className="h-12 px-4 flex items-center justify-between bg-white border-b sticky top-0 z-10">
         <div className="flex items-center space-x-4">
           {(['pen', 'eraser', 'marker', 'view'] as const).map((tool) => (
             <button
