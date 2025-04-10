@@ -190,6 +190,8 @@ const Index = () => {
         onChange={handleContentChange}
         className="note-content"
         placeholder="ここに入力"
+        autocomplete="off"
+        style={{ WebkitUserModify: 'read-write-plaintext-only' }}
       />
     </div>
   );
